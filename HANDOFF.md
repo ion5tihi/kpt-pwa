@@ -78,6 +78,10 @@
   поки прийнятний (тестовий). Anthropic tool use + стрімінг — теж потребують живого прогону.
 
 ## Деплой: GitHub Pages
+Репо: **github.com/ion5tihi/kpt-pwa** (origin уже налаштовано в локальній теці; гілка `main`).
+Деплой = `git add -A && git commit && git push` (Git Credential Manager закешував доступ —
+пуш проходить без вікна). 2026-06-22 зроблено force-push повної модульної версії, що
+замінила старий inline-моноліт. Live: `https://ion5tihi.github.io/kpt-pwa/`.
 Застосунок хоститься на GitHub Pages (статика, відносні шляхи — працює під підкаталогом).
 - **Service Worker = network-first** (`sw.js`): онлайн завжди свіжий код, кеш — офлайн-фолбек.
   ⚠️ Піднімай `CACHE_NAME` при кожному релізі (зараз `kpt-vct-v0.2.0`). Після деплою нового

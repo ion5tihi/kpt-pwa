@@ -1129,6 +1129,13 @@ th, td {
   white-space: nowrap;
 }
 
+/* Таблиця історії: на вузьких екранах прокручуємо по горизонталі (свайп),
+   щоб усі колонки лишались читабельними, а не обрізались. */
+#history-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 th {
   font-weight: 600;
   color: var(--ink-soft);
