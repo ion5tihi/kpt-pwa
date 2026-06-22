@@ -1,0 +1,10 @@
+{
+  "name": "kpt-klinika",
+  "version": "0.1.0",
+  "description": "Віртуальна клініка — тренажер для терапевтів (Virtual Clinic Trainer)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"src/**/*.test.js\""
+  }
+}

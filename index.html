@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>КПТ-Супервізор та Трекер</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- PWA Manifest & Theme Color -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2e7d6b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-logo">
+      <div class="logo-icon">🌿</div>
+      <div class="logo-text">
+        <h1>КПТ-Асистент</h1>
+        <div class="header-subtitle">Тренажер компетентностей & Клінічний трекер <span style="font-size: 8px; font-family: monospace; opacity: 0.5;">v3.0.0</span></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="theme-toggle" class="icon-btn" title="Змінити тему">🌓</button>
+    </div>
+  </header>
+
+  <!-- Main Content Areas (Tabs) -->
+  <main class="app-main">
+    
+    <!-- TAB 1: SIMULATOR -->
+    <section id="tab-simulator" class="tab-content active">
+
+      <!-- Caseload — список віртуальних випадків зі статусами (T1.5) -->
+      <div class="panel glass caseload-panel" id="caseload-panel" style="display:none">
+        <div class="panel-head" data-collapse="caseload">
+          <h3>🏥 Мій кейслоад</h3>
+          <span id="caseload-count" class="item-meta"></span>
+          <span class="panel-chev">▾</span>
+        </div>
+        <div class="panel-body" id="caseload-list"></div>
+      </div>
+
+      <!-- Профіль компетентності стажера — дашборд «що тренувати далі» (T4.2) -->
+      <div class="panel glass dashboard-panel" id="dashboard-panel" style="display:none">
+        <div class="panel-head" data-collapse="dashboard">
+          <h3>📈 Мій прогрес (CTS-R / MI)</h3>
+          <span class="panel-chev">▾</span>
+        </div>
+        <div class="panel-body" id="dashboard-body"></div>
+      </div>
+
+      <div class="simulator-layout">
+        
+        <!-- Patient Constructor Drawer / Sidebar -->
+        <div class="constructor-card panel glass">
+          <div class="panel-head">
+            <h3>⚙️ Конструктор пацієнта</h3>
+            <button id="toggle-constructor-btn" class="sm-btn">Згорнути</button>
+          </div>
+          <div class="panel-body" id="constructor-content">
+            <div class="mode-selector seg-control">
+              <button id="mode-manual" class="active" data-mode="manual">Параметри</button>
+              <button id="mode-auto" data-mode="auto">Випадковий</button>
+            </div>
+
+            <div id="manual-params">
+              <div class="input-group">
+                <label for="p-type">Тип проблеми</label>
+                <select id="p-type">
+                  <option value="alko">Алкогольна залежність</option>
+                  <option value="opio">Опіоїдна залежність</option>
+                  <option value="stim">Залежність від стимуляторів</option>
+                  <option value="sed">Залежність від седативних</option>
+                  <option value="poly">Полінаркоманія</option>
+                  <option value="gambl">Гемблінг</option>
+                  <option value="dual-dep">Залежність + депресія</option>
+                  <option value="dual-gtr">Залежність + ГТР</option>
+                  <option value="dual-ptsr">Залежність + ПТСР</option>
+                  <option value="dual-panic">Залежність + Панічний розлад</option>
+                  <option value="pure-dep">Чиста депресія</option>
+                  <option value="pure-ocd">ОКР</option>
+                  <option value="pure-phobia">Фобія</option>
+                </select>
+              </div>
+
+              <div class="input-group">
+                <label for="p-stage">Етап лікування</label>
+                <select id="p-stage">
+                  <option value="детокс">Детоксикація</option>
+                  <option value="рання реабілітація" selected>Рання реабілітація</option>
+                  <option value="стабілізація">Стабілізація</option>
+                  <option value="профілактика рецидиву">Профілактика рецидиву</option>
+                </select>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="p-resist">Рівень опору</label>
+                  <span class="slider-val" id="val-resist">3</span>
+                </div>
+                <input type="range" id="p-resist" min="0" max="5" value="3">
+                <div class="slider-labels">
+                  <span>Співпраця</span>
+                  <span>Глуха стіна</span>
+                </div>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="p-insight">Рівень усвідомлення (інсайт)</label>
+                  <span class="slider-val" id="val-insight">2</span>
+                </div>
+                <input type="range" id="p-insight" min="0" max="5" value="2">
+                <div class="slider-labels">
+                  <span>Заперечення</span>
+                  <span>Ясно бачить</span>
+                </div>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="p-open">Емоційна відкритість</label>
+                  <span class="slider-val" id="val-open">2</span>
+                </div>
+                <input type="range" id="p-open" min="0" max="5" value="2">
+                <div class="slider-labels">
+                  <span>Затиснутий</span>
+                  <span>Ділиться легко</span>
+                </div>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="p-risk">Клінічний ризик</label>
+                  <span class="slider-val" id="val-risk">1</span>
+                </div>
+                <input type="range" id="p-risk" min="0" max="3" value="1">
+                <div class="slider-labels">
+                  <span>Безпечно</span>
+                  <span>⚠ Суїцид/Відміна</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="auto-params" style="display:none">
+              <p class="info-text">Система автоматично згенерує випадковий складний клінічний випадок з ухилом у наркологію та розлади психіки.</p>
+            </div>
+
+            <button id="btn-generate-patient" class="primary-btn">Згенерувати пацієнта</button>
+          </div>
+        </div>
+
+        <!-- Dialogue & Supervisor Grid -->
+        <div class="chat-and-supervisor">
+          
+          <!-- Chat Card -->
+          <div class="chat-card panel glass">
+            <div class="panel-head chat-header">
+              <div class="chat-status">
+                <span class="status-dot"></span>
+                <span id="active-patient-name">Оберіть пацієнта...</span>
+              </div>
+              <div class="session-actions">
+                <button id="btn-copy-chat" class="ghost-btn sm-btn" title="Копіювати весь чат">⧉ Чат</button>
+                <button id="btn-show-eval" class="ghost-btn sm-btn">📋 CTS-R Оцінка</button>
+                <button id="btn-reset-session" class="danger-btn sm-btn">🔄 Скинути</button>
+              </div>
+            </div>
+
+            <!-- Картка пацієнта — згортувана, поза стрічкою чату (щоб не подовжувати скрол) -->
+            <div id="patient-card-bar" class="patient-card-bar" style="display:none">
+              <button id="toggle-patient-card" class="card-toggle" aria-expanded="false">📋 Картка пацієнта <span class="chev">▸</span></button>
+              <div id="patient-card-content" class="patient-card-content" hidden></div>
+            </div>
+
+            <div id="chat-feed" class="chat-feed">
+              <div class="empty-state">
+                <div class="empty-icon">🛋️</div>
+                <p>Налаштуйте параметри зліва та натисніть «Згенерувати пацієнта», щоб почати терапевтичну бесіду.</p>
+              </div>
+            </div>
+
+            <div class="chat-compose">
+              <textarea id="chat-input" placeholder="Ваша репліка пацієнту... (Enter для надсилання)" disabled></textarea>
+              <div class="compose-actions">
+                <button id="btn-voice-input" class="voice-btn" title="Диктувати голосом" disabled>
+                  <span class="mic-icon">🎤</span>
+                </button>
+                <button id="btn-send-message" class="send-btn" disabled>Надіслати</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Supervisor Help Card -->
+          <div class="supervisor-card panel glass">
+            <div class="panel-head">
+              <h3>👤 Поради супервізора (CTS-R)</h3>
+            </div>
+            <div class="panel-body" id="supervisor-feed">
+              <div class="empty-state">
+                <p>Підказки з'являться після першої репліки пацієнта.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: PATIENT TRACKER -->
+    <section id="tab-tracker" class="tab-content">
+      <div class="tracker-layout">
+        
+        <!-- Patients List panel -->
+        <div class="patients-list-card panel glass">
+          <div class="panel-head">
+            <h3>👥 Пацієнти</h3>
+          </div>
+          <div class="panel-body">
+            <div class="list-filter seg-control">
+              <button id="filter-all" class="active">Всі</button>
+              <button id="filter-group">★ Експ. група</button>
+            </div>
+            <div id="tracker-patients-list" class="patients-list">
+              <!-- JS renders patient list items here -->
+            </div>
+            <div class="add-patient-form">
+              <input type="text" id="new-patient-code" placeholder="Код (напр. О-41)" maxlength="12">
+              <button id="btn-add-patient" class="primary-btn">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Patient Details and Form -->
+        <div class="patient-details-layout">
+          
+          <!-- Note Form Card -->
+          <div class="note-form-card panel glass">
+            <div class="panel-head">
+              <h3>📝 Запис про прийом</h3>
+            </div>
+            <div class="panel-body" id="tracker-form-container">
+              <div class="empty-state">
+                <p>Оберіть пацієнта зі списку зліва, щоб додати замітку або переглянути графіки.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts and Interpretation -->
+          <div class="charts-card panel glass">
+            <div class="panel-head">
+              <h3>📈 Клінічна динаміка</h3>
+            </div>
+            <div class="panel-body">
+              <div id="chart-container">
+                <div class="empty-state">
+                  <p>Тут з'явиться графік після збереження хоча б однієї сесії.</p>
+                </div>
+              </div>
+              <div id="chart-interpretation" class="interpretation-box">
+                <!-- JS dynamically renders interpretation -->
+              </div>
+            </div>
+          </div>
+
+          <!-- History Records Table -->
+          <div class="history-table-card panel glass">
+            <div class="panel-head">
+              <h3>📋 Історія прийомів</h3>
+            </div>
+            <div class="panel-body table-responsive" id="history-table-container">
+              <p class="empty-text">Історія заміна порожня.</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: LIBRARY -->
+    <section id="tab-library" class="tab-content">
+      <div class="library-layout">
+        
+        <!-- CTS-R competencies card -->
+        <div class="library-card panel glass">
+          <div class="panel-head">
+            <h3>📋 Шкала компетенцій CTS-R (Cognitive Therapy Scale - Revised)</h3>
+          </div>
+          <div class="panel-body markdown-style">
+            <p>Офіційна шкала для оцінювання сесій КПТ терапевта. Кожен з 12 пунктів оцінюється за шкалою від 0 до 6:</p>
+            <div class="ctsr-list">
+              <div class="ctsr-item">
+                <span class="ctsr-num">1</span>
+                <div>
+                  <strong>Порядок денний (Agenda)</strong>
+                  <p>Встановлення чітких пріоритетів на сесію спільно з пацієнтом (вступ, проблеми, обговорення домашнього завдання).</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">2</span>
+                <div>
+                  <strong>Зворотний зв'язок (Feedback)</strong>
+                  <p>Регулярний запит реакцій пацієнта на хід розмови, інтерпретації та підсумки, щоб залишатися в одному інформаційному полі.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">3</span>
+                <div>
+                  <strong>Співпраця (Collaboration)</strong>
+                  <p>Формування команди терапевт-пацієнт. Терапевт не виступає лектором чи босом, а спільно шукає рішення (колаборативний емпіризм).</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">4</span>
+                <div>
+                  <strong>Темп та керування часом (Pacing)</strong>
+                  <p>Здатність укластися у виділений час, не перериваючи пацієнта різко, але й не дозволяючи йти в неважливі деталі.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">5</span>
+                <div>
+                  <strong>Міжособистісна ефективність (Interpersonal Effectiveness)</strong>
+                  <p>Вияв теплоти, емпатії, щирості та поваги до пацієнта, підтримка терапевтичного альянсу.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">6</span>
+                <div>
+                  <strong>Скероване відкриття / Сократичний діалог (Guided Discovery)</strong>
+                  <p>Використання системи питань, які допомагають пацієнту самому побачити протиріччя в думках та відкрити нові альтернативи.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">7</span>
+                <div>
+                  <strong>Концептуалізація (Conceptualization)</strong>
+                  <p>Терапевтичне бачення випадку: як глибинні переконання пацієнта впливають на його поточні думки, почуття та поведінку.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">8</span>
+                <div>
+                  <strong>Ключові когніції (Key Cognitions)</strong>
+                  <p>Визначення автоматичних думок, проміжних правил та ядерних переконань, що запускають деструктивні стани.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">9</span>
+                <div>
+                  <strong>Робота з емоціями (Focus on Emotion)</strong>
+                  <p>Спрямування уваги на емоції, їх легітимізація, вербалізація та використання як джерела важливої інформації.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">10</span>
+                <div>
+                  <strong>Робота з поведінкою (Focus on Behavior)</strong>
+                  <p>Аналіз дій пацієнта, планування поведінкових змін, подолання уникання та пасивності.</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">11</span>
+                <div>
+                  <strong>Техніки змін (Cognitive/Behavioral Techniques)</strong>
+                  <p>Професійне та доречне застосування технік (когнітивна реструктуризація, поведінкові експерименти, зважування, MI-техніки).</p>
+                </div>
+              </div>
+              <div class="ctsr-item">
+                <span class="ctsr-num">12</span>
+                <div>
+                  <strong>Домашнє завдання (Homework)</strong>
+                  <p>Спільне створення корисних практичних вправ для відпрацювання навичок пацієнта між сесіями (має бути конкретним та реалістичним).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CBT & MI Techniques Guide -->
+        <div class="library-card panel glass">
+          <div class="panel-head">
+            <h3>💡 Шпаргалка КПТ та Мотиваційного інтерв'ювання (MI)</h3>
+          </div>
+          <div class="panel-body text-content">
+            <h4>1. Мотиваційне інтерв'ювання (при роботі з опором та амбівалентністю)</h4>
+            <ul>
+              <li><strong>Рефлексивне слухання (Відображення):</strong> повторення слів пацієнта з акцентом на почуттях. <br><em>Приклад: «Тобто ви відчуваєте злість, коли родичі контролюють вашу тверезість...»</em></li>
+              <li><strong>Двостороннє відображення:</strong> підкреслення обох сторін амбівалентності. <br><em>Приклад: «З одного боку, алкоголь допомагає розслабитись, а з іншого — ви бачите, як руйнується ваша кар'єра...»</em></li>
+              <li><strong>Підтримка самоефективності:</strong> нагадування про минулі успіхи пацієнта.</li>
+            </ul>
+            
+            <h4 style="margin-top:15px;">2. Сократичний діалог</h4>
+            <ul>
+              <li><strong>Питання про докази:</strong> <em>«Які факти підтверджують цю думку, а які суперечать їй?»</em></li>
+              <li><strong>Питання про альтернативи:</strong> <em>«Якби з цією ситуацією зіткнувся ваш близький друг, як би ви на це подивилися?»</em></li>
+              <li><strong>Аналіз наслідків:</strong> <em>«Що найгірше може трапитись? Як ви з цим впораєтесь? Що найкраще може статись? Який найбільш реалістичний сценарій?»</em></li>
+            </ul>
+            
+            <h4 style="margin-top:15px;">3. Робота з потягом (крейвінгом) у наркології</h4>
+            <ul>
+              <li><strong>Техніка відкладення:</strong> домовленість почекати 15 хвилин перед зривом (потяг зазвичай спадає хвилеподібно).</li>
+              <li><strong>Розділення із залежним Я:</strong> опредметнення потягу як «голосу хвороби», а не власного бажання пацієнта.</li>
+              <li><strong>Аналіз тригерів:</strong> ланцюжок «Тригер (конфлікт) ➔ Автоматична думка ➔ Емоція/Потяг ➔ Вживання». Задача — розірвати ланцюжок.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Beginner Section Guide -->
+        <div class="library-card panel glass">
+          <div class="panel-head">
+            <h3>🔰 Розділ для початківців: Поради та чек-листи</h3>
+          </div>
+          <div class="panel-body text-content">
+            <h4>1. Поради для початку роботи</h4>
+            <ul>
+              <li><strong>Встановлюйте терапевтичний альянс першочергово:</strong> Без довіри пацієнт закриється, особливо при вираженому опорі. Не поспішайте критикувати чи повчати.</li>
+              <li><strong>Запитуйте дозвіл:</strong> Перед наданням будь-якої інформації або порад запитайте: <em>«Чи можу я поділитися з вами інформацією про те, як працює потяг?»</em>. Це різко знижує опір.</li>
+              <li><strong>Працюйте з амбівалентністю:</strong> Досліджуйте і аргументи «за» вживання, і аргументи «проти». Усвідомлення роздвоєності — перший крок до змін.</li>
+            </ul>
+            
+            <h4 style="margin-top:15px;">2. Чек-лист «Про що не забути»</h4>
+            <ul>
+              <li><strong>Agenda:</strong> Окреслити та погодити порядок денний на початку сесії.</li>
+              <li><strong>Feedback:</strong> Запитати проміжний зворотний зв'язок під час бесіди.</li>
+              <li><strong>Homework:</strong> Спільно обговорити та призначити домашнє завдання наприкінці.</li>
+              <li><strong>Conceptualization:</strong> Підсумувати ключові когніції пацієнта та зв'язати їх із поведінкою.</li>
+            </ul>
+            
+            <h4 style="margin-top:15px;">3. Безпека та червоні прапорці (Safety & Red Flags)</h4>
+            <ul>
+              <li>🚨 <strong>Суїцидальний ризик:</strong> Завжди реагуйте на будь-які натяки чи згадки про небажання жити. Не залишайте без оцінки ризику та антисуїцидального контракту.</li>
+              <li>🚨 <strong>Абстинентний синдром:</strong> Тяжкі фізичні симптоми (сильний тремор, судоми, галюцинації) потребують негайної медичної допомоги, а не розмовної терапії.</li>
+              <li>🚨 <strong>Гострий психоз або агресія:</strong> У разі неадекватної поведінки чи прямої загрози пріоритетом є ваша власна безпека.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 4: SETTINGS -->
+    <section id="tab-settings" class="tab-content">
+      <div class="settings-layout panel glass">
+        <div class="panel-head">
+          <h3>⚙️ Налаштування застосунку</h3>
+        </div>
+        <div class="panel-body">
+          
+          <div class="settings-section">
+            <h4>🔌 Провайдер штучного інтелекту</h4>
+            
+            <div class="input-group">
+              <label for="settings-provider">Провайдер API</label>
+              <select id="settings-provider">
+                <option value="openai" selected>OpenAI (GPT) — Рекомендовано</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+              </select>
+            </div>
+
+            <div class="input-group">
+              <label for="settings-api-key">Ключ API (API Key)</label>
+              <div class="api-key-wrapper">
+                <input type="password" id="settings-api-key" placeholder="Введіть ваш ключ API (sk-...)">
+                <button id="btn-toggle-key-visibility" class="ghost-btn">👁️</button>
+              </div>
+              <p class="hint">Ключ зберігається виключно у вашому браузері на телефоні і надсилається безпосередньо розробникам ШІ.</p>
+            </div>
+
+            <div class="input-group" id="group-openai-model">
+              <label for="settings-openai-model">Модель OpenAI</label>
+              <select id="settings-openai-model">
+                <option value="gpt-4o-mini" selected>gpt-4o-mini (швидка, дешева)</option>
+                <option value="gpt-4o">gpt-4o (розумна, дорожча)</option>
+              </select>
+            </div>
+
+            <div class="input-group" id="group-anthropic-model" style="display:none">
+              <label for="settings-anthropic-model">Модель Anthropic</label>
+              <select id="settings-anthropic-model">
+                <option value="claude-3-5-haiku-20241022">claude-3-5-haiku (швидка, дешева)</option>
+                <option value="claude-3-5-sonnet-20241022" selected>claude-3-5-sonnet (розумна)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h4>💡 Розширені налаштування промпту</h4>
+            <div class="input-group">
+              <label for="settings-custom-prompt">Кастомний системний промпт (якщо пустий — використовується стандартний)</label>
+              <textarea id="settings-custom-prompt" rows="5" placeholder="Дозволяє налаштувати поведінку пацієнта та супервізора..."></textarea>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h4>💾 Резервні копії та очищення</h4>
+            <p class="info-text" style="margin-bottom:12px;">Усі ваші дані (списки пацієнтів, замітки та графіки) записуються тільки в цей браузер. Зберігайте копії, щоб не втратити записи при очищенні кешу.</p>
+            
+            <div class="settings-buttons">
+              <button id="btn-export-data" class="ghost-btn">⬇ Зберегти базу у файл (Експорт)</button>
+              <button id="btn-trigger-import" class="ghost-btn">⬆ Завантажити базу з файлу (Імпорт)</button>
+              <input type="file" id="settings-import-file" accept=".json" style="display:none">
+              
+              <button id="btn-clear-all" class="danger-btn">🗑️ Скинути всі дані програми</button>
+            </div>
+          </div>
+
+          <div class="save-settings-row">
+            <button id="btn-save-settings" class="primary-btn">Зберегти налаштування</button>
+            <span id="settings-saved-success" class="success-note">✓ Збережено успішно!</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="app-nav">
+    <button class="nav-item active" data-tab="tab-simulator">
+      <span class="nav-icon">🛋️</span>
+      <span class="nav-label">Тренажер</span>
+    </button>
+    <button class="nav-item" data-tab="tab-tracker">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Трекер</span>
+    </button>
+    <button class="nav-item" data-tab="tab-library">
+      <span class="nav-icon">📚</span>
+      <span class="nav-label">Бібліотека</span>
+    </button>
+    <button class="nav-item" data-tab="tab-settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Налаштування</span>
+    </button>
+  </nav>
+
+  <!-- Modals (CTS-R Full Evaluation Modal) -->
+  <div id="eval-modal" class="modal-backdrop">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>📋 Супервізійний звіт CTS-R</h2>
+        <button id="btn-close-eval" class="close-modal-btn">×</button>
+      </div>
+      <div class="modal-body markdown-style" id="eval-modal-body">
+        <!-- Rendered evaluation output -->
+      </div>
+      <div class="modal-foot">
+        <button id="btn-export-eval-log" class="ghost-btn">⬇ Завантажити лог сесії (HTML)</button>
+        <button id="btn-close-eval-foot" class="primary-btn">Зрозуміло</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: підсумковий звіт по випадку (T4.3) -->
+  <div id="case-report-modal" class="modal-backdrop">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>📄 Звіт по випадку</h2>
+        <button id="btn-close-case-report" class="close-modal-btn">×</button>
+      </div>
+      <div class="modal-body" id="case-report-body">
+        <!-- Rendered case report -->
+      </div>
+      <div class="modal-foot">
+        <button id="btn-close-case-report-foot" class="primary-btn">Закрити</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Javascript Modules -->
+  <script type="module" src="app.js"></script>
+  
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registered successfully!', reg.scope))
+          .catch(err => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
