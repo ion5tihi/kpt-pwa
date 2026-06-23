@@ -7,6 +7,13 @@ import {
 import { fetchWithRetry } from './src/net/fetchRetry.js';
 import { assessmentJsonSchema } from './src/clinic/assessment.js';
 
+// Хук обліку токенів: app.js реєструє свій збирач через setUsageReporter().
+let usageReporter = null;
+export function setUsageReporter(fn) { usageReporter = fn; }
+function reportUsage(info) {
+  if (usageReporter) { try { usageReporter(info); } catch (e) { /* облік не має ламати потік */ } }
+}
+
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"; // Примітка: може вимагати CORS проксі у браузері
 
@@ -64,6 +71,14 @@ export async function callOpenAI(settings, messages, jsonMode = false, jsonSchem
   }
 
   const data = await response.json();
+  if (data.usage) {
+    reportUsage({
+      provider: 'openai',
+      model: body.model,
+      promptTokens: data.usage.prompt_tokens,
+      completionTokens: data.usage.completion_tokens
+    });
+  }
   return data.choices[0].message.content;
 }
 
@@ -108,6 +123,14 @@ export async function callAnthropic(settings, system, messages) {
   }
 
   const data = await response.json();
+  if (data.usage) {
+    reportUsage({
+      provider: 'anthropic',
+      model: anthropicModel || "claude-3-5-sonnet-20241022",
+      promptTokens: data.usage.input_tokens,
+      completionTokens: data.usage.output_tokens
+    });
+  }
   return data.content[0].text;
 }
 

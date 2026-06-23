@@ -1,7 +1,8 @@
 // app.js - Головний контролер мобільного КПТ-застосунку
 
 import { storage } from './storage.js';
-import { api, TYPE_LABEL } from './api.js';
+import { api, TYPE_LABEL, setUsageReporter } from './api.js';
+import { emptyUsage, addUsage, totalTokens, formatTokens, formatCostUSD } from './src/usage/usage.js';
 import { SpeechRecognizer } from './speech.js';
 import { intakeFromConstructor } from './src/clinic/intake.js';
 import { createCase, recordSessionOutcome, getTrajectory, canContinue, forkCaseFromSession } from './src/clinic/case.js';
@@ -118,6 +119,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupSimulatorTab();
   setupTrackerTab();
   setupCollapsiblePanels();
+  setUsageReporter(recordUsage);
 
   // Рендер за замовчуванням
   renderSimulator();
@@ -651,6 +653,20 @@ function currentCaseCode() {
   return simulatorState.activeCaseCode || trainerCodeFromName(simulatorState.activeName);
 }
 
+// Облік витрати токенів: накопичуємо глобально (storage) і на активному випадку.
+function recordUsage(info) {
+  const g = storage.getUsage() || emptyUsage();
+  addUsage(g, info);
+  storage.saveUsage(g);
+
+  const kase = cases[currentCaseCode()];
+  if (kase) {
+    kase.tokens = kase.tokens || emptyUsage();
+    addUsage(kase.tokens, info);
+    storage.saveCases(cases);
+  }
+}
+
 // Збереження тренувальної сесії до трекера
 // Повернути наявний Case для коду пацієнта або створити його з поточного конфіга
 // (фолбек для пацієнтів, згенерованих до появи Case, або повторних сесій).
@@ -964,7 +980,7 @@ function renderCaseload() {
           <span class="case-name">${escapeHtml(k.profile?.displayName || code)}</span>
           <span class="scale-badge ${st.cls}">${st.label}</span>
         </div>
-        <div class="case-meta">${escapeHtml(type)} · ${k.sessions.length} сес. · ${escapeHtml(k.profile?.treatmentStage || '')}</div>
+        <div class="case-meta">${escapeHtml(type)} · ${k.sessions.length} сес. · ${escapeHtml(k.profile?.treatmentStage || '')}${k.tokens ? ` · 🪙 ${formatTokens(totalTokens(k.tokens))}` : ''}</div>
         <div class="case-state">
           <span title="Потяг (PACS), 0–30">🍶 ${Math.round(s.pacs ?? 0)}/30</span>
           <span title="Депресія (PHQ-9), 0–27">🌧 ${Math.round(s.phq9 ?? 0)}/27</span>
@@ -1173,6 +1189,11 @@ function renderDashboard() {
     ? p.recommendations.map(r => `<li><b>${escapeHtml(r.area)}</b> — ${escapeHtml(r.detail)}</li>`).join('')
     : '<li class="dash-empty">Слабких зон не виявлено — тримай рівень 👌</li>';
 
+  const usage = storage.getUsage();
+  const usageHtml = (usage && usage.calls)
+    ? `🪙 <strong>${formatTokens(totalTokens(usage))}</strong> токенів · ${usage.calls} запитів · <strong>${formatCostUSD(usage)}</strong> <span class="dash-empty">(приблизно)</span>`
+    : '<span class="dash-empty">Ще немає викликів LLM</span>';
+
   body.innerHTML = `
     <div class="dash-stats">
       <div class="dash-stat"><span class="dash-num">${p.sessionsCompleted}</span><span class="dash-lbl">сесій</span></div>
@@ -1194,6 +1215,7 @@ function renderDashboard() {
       </div>
     </div>
     <div class="dash-section"><div class="dash-section-title">Безпека</div><div class="dash-safety">${safetyHtml}</div></div>
+    <div class="dash-section"><div class="dash-section-title">Витрати токенів (усього)</div><div class="dash-safety">${usageHtml}</div></div>
     <div class="dash-section">
       <div class="dash-section-title">🎯 Що тренувати далі</div>
       <ul class="dash-recs">${recsHtml}</ul>

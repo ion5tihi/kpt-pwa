@@ -125,6 +125,17 @@ export const storage = {
     localStorage.setItem('kpt_cases', JSON.stringify(cases || {}));
   },
 
+  // Глобальний облік витрати токенів LLM
+  getUsage() {
+    const raw = localStorage.getItem('kpt_usage');
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  },
+
+  saveUsage(usage) {
+    localStorage.setItem('kpt_usage', JSON.stringify(usage || {}));
+  },
+
   // Експорт даних у текстовий рядок JSON
   exportData() {
     const data = {
@@ -160,5 +171,6 @@ export const storage = {
     localStorage.removeItem('kpt_settings');
     localStorage.removeItem('kpt_sim_state');
     localStorage.removeItem('kpt_cases');
+    localStorage.removeItem('kpt_usage');
   }
 };
