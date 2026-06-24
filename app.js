@@ -5,8 +5,9 @@ import { api, TYPE_LABEL, setUsageReporter } from './api.js';
 import { emptyUsage, addUsage, totalTokens, formatTokens, formatCostUSD } from './src/usage/usage.js';
 import { SpeechRecognizer } from './speech.js';
 import { intakeFromConstructor } from './src/clinic/intake.js';
-import { createCase, recordSessionOutcome, getTrajectory, canContinue, forkCaseFromSession, beginSession } from './src/clinic/case.js';
+import { createCase, recordSessionOutcome, getTrajectory, canContinue, forkCaseFromSession, beginSession, applyMissedSession } from './src/clinic/case.js';
 import { CASE_TEMPLATES, getTemplate, templatesByDifficulty, DIFFICULTY_LABELS, intakeFromTemplate } from './src/clinic/templates.js';
+import { caseNeedsFollowup, makeMissedSessionEvent, makeUrgentIntakeEvent, pickUrgentTemplate, pendingCount } from './src/clinic/inbox.js';
 import { buildAssessment } from './src/clinic/assessment.js';
 import { buildTraineeProfile, buildCaseReport, CTSR_ITEM_LABELS, MITI_GLOBAL_LABELS } from './src/clinic/profile.js';
 
@@ -27,6 +28,7 @@ let simulatorState = storage.getSimulatorState() || {
   hiddenState: null,
   chatHistory: [], // [{role: 'user'|'assistant', content: string}]
   log: [], // [{type: 'card'|'patient'|'you'|'hint'|'eval', text: string, hint?: object}]
+  inbox: [], // події клініки (T5.3): [{id, type, status, ...}]
   constructorConfig: {
     type: 'alko',
     stage: 'рання реабілітація',
@@ -280,6 +282,14 @@ function setupSimulatorTab() {
   // Запуск генерації пацієнта
   $('btn-generate-patient').onclick = generateVirtualPatient;
 
+  // Інбокс клініки (T5.3): делеговані кліки на кнопках-діях
+  if ($('inbox-list')) {
+    $('inbox-list').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-inbox-id]');
+      if (b) resolveInboxEvent(b.getAttribute('data-inbox-id'), b.getAttribute('data-inbox-opt'));
+    });
+  }
+
   // Відправка повідомлення
   $('btn-send-message').onclick = sendTherapistMessage;
   $('chat-input').onkeydown = (e) => {
@@ -407,6 +417,100 @@ function restoreConstructorUI() {
 
 function saveSimulator() {
   storage.saveSimulatorState(simulatorState);
+}
+
+// ---- Інбокс подій клініки (T5.3) ----
+function getInbox() {
+  if (!Array.isArray(simulatorState.inbox)) simulatorState.inbox = [];
+  return simulatorState.inbox;
+}
+
+// Додати подію, уникаючи дублів для того самого кейса (missed_session).
+function enqueueInboxEvent(event) {
+  const inbox = getInbox();
+  if (event.type === 'missed_session' &&
+      inbox.some(e => e.status === 'pending' && e.type === 'missed_session' && e.caseCode === event.caseCode)) {
+    return; // вже є відкрите попередження для цього кейса
+  }
+  inbox.unshift(event);
+  saveSimulator();
+  renderInbox();
+}
+
+// Після запису сесії: якщо активний кейс під ризиком відмови — попередження про пропуск.
+function maybeEnqueueMissedSession(pCode, kase) {
+  if (kase && caseNeedsFollowup(kase)) {
+    enqueueInboxEvent(makeMissedSessionEvent(pCode, kase));
+  }
+}
+
+// Коли звільняється «слот» (кейс закрито) — у клініку надходить терміновий пацієнт.
+function enqueueUrgentIntake() {
+  const used = Object.values(cases).map(k => k.profile?.templateId).filter(Boolean);
+  const seed = (Date.now() ^ Object.keys(cases).length) >>> 0;
+  const t = pickUrgentTemplate(seed, used);
+  if (t) enqueueInboxEvent(makeUrgentIntakeEvent(t));
+}
+
+function renderInbox() {
+  const card = $('inbox-card'); const list = $('inbox-list'); const badge = $('inbox-badge');
+  if (!card || !list) return;
+  const pending = getInbox().filter(e => e.status === 'pending');
+  const n = pending.length;
+  card.style.display = n ? '' : 'none';
+  if (badge) { badge.style.display = n ? '' : 'none'; badge.textContent = String(n); }
+  list.innerHTML = pending.map(e => {
+    const opts = e.options.map(o =>
+      `<button class="sm-btn ${o.tone === 'primary' ? 'primary-btn' : o.tone === 'danger' ? 'danger-btn' : 'ghost-btn'}"
+        data-inbox-id="${e.id}" data-inbox-opt="${o.id}">${escapeHtml(o.label)}</button>`
+    ).join('');
+    const cls = e.type === 'missed_session' ? 'inbox-miss' : 'inbox-urgent';
+    return `<div class="inbox-item ${cls}">
+      <p class="inbox-title">${escapeHtml(e.title)}</p>
+      <p class="inbox-body">${escapeHtml(e.body)}</p>
+      <div class="inbox-actions">${opts}</div>
+    </div>`;
+  }).join('');
+}
+
+// Обробка вибору стажера в інбоксі.
+async function resolveInboxEvent(id, optionId) {
+  const inbox = getInbox();
+  const ev = inbox.find(e => e.id === id);
+  if (!ev || ev.status !== 'pending') return;
+
+  if (ev.type === 'missed_session') {
+    const kase = cases[ev.caseCode];
+    if (!kase || kase.status !== 'active') {
+      ev.status = 'resolved'; ev.resolution = 'Випадок уже неактивний.';
+    } else {
+      const { summary } = applyMissedSession(kase, optionId);
+      storage.saveCases(cases);
+      ev.status = 'resolved'; ev.resolution = summary;
+      renderCaseload();
+    }
+    saveSimulator();
+    renderInbox();
+    return;
+  }
+
+  if (ev.type === 'urgent_intake') {
+    ev.status = 'resolved';
+    if (optionId === 'accept') {
+      ev.resolution = 'Випадок прийнято.';
+      saveSimulator();
+      renderInbox();
+      // Налаштувати конструктор на цей шаблон і одразу згенерувати пацієнта.
+      const cfg = simulatorState.constructorConfig;
+      cfg.mode = 'template'; cfg.templateId = ev.templateId;
+      restoreConstructorUI();
+      await generateVirtualPatient();
+    } else {
+      ev.resolution = 'Перенаправлено.';
+      saveSimulator();
+      renderInbox();
+    }
+  }
 }
 
 function resetSimulatorSession() {
@@ -668,6 +772,11 @@ async function requestCTSRSupervision() {
         sessionEvents = result.events;   // зрив/криза/тригер цієї сесії (T2.6)
         if (kase.status !== 'active') closedThisSession = kase.status; // випадок завершився саме зараз
         storage.saveCases(cases);
+
+        // Інбокс клініки (T5.3): попередження про пропуск при ризику відмови; коли кейс
+        // закрився — у клініку надходить терміновий новий пацієнт (звільнився слот).
+        if (kase.status === 'active') maybeEnqueueMissedSession(pCode, kase);
+        else enqueueUrgentIntake();
       }
     } catch (err) {
       console.warn('Структурована оцінка недоступна — стан не оновлено:', err);
@@ -1346,6 +1455,7 @@ function chatTranscript() {
 function renderSimulator() {
   renderCaseload();
   renderDashboard();
+  renderInbox();
 
   const dFeed = $('chat-feed');
   const hFeed = $('supervisor-feed');

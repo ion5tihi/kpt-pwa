@@ -6,10 +6,12 @@
 import { stepBetweenSessions } from '../engine/engine.js';
 import { ENGINE_PARAMS } from '../engine/params.js';
 import { scriptedContext, applyPreSessionScript } from './scripted.js';
+import { INBOX_PARAMS } from './inbox.js';
 
 const CURRENT_SCHEMA = 1;
 const clone = (x) => structuredClone(x);
 const uid = () => 'c_' + Math.random().toString(36).slice(2, 10);
+const clamp100 = (x) => Math.min(100, Math.max(0, x));
 
 /**
  * Створити випадок із даних прийому.
@@ -113,6 +115,42 @@ export function recordSessionOutcome(kase, assessment, opts = {}, params = ENGIN
   }
 
   return { session, result };
+}
+
+/**
+ * Реакція на пропуск сесії (T5.3, інбокс клініки). Мутує кейс: пише `missed_session`
+ * BetweenEvent і застосовує детерміновані наслідки вибору стажера між сесіями.
+ * @param {object} kase
+ * @param {'outreach'|'wait'|'discharge'} optionId
+ * @param {object} [params]  INBOX_PARAMS
+ * @returns {{summary:string, event:object, closed:boolean}}
+ */
+export function applyMissedSession(kase, optionId, params = INBOX_PARAMS) {
+  if (kase.status !== 'active') {
+    throw new Error(`Випадок закрито (статус: ${kase.status}). Реакція на пропуск неможлива.`);
+  }
+  const afterIdx = kase.sessions.length; // пропуск стається ПІСЛЯ останньої проведеної сесії
+  const event = { type: 'missed_session', caseId: kase.id, afterSessionIndex: afterIdx, severity: 0.3, description: '' };
+
+  if (optionId === 'discharge') {
+    event.description = 'Виписано за повторну неявку.';
+    kase.events.push(event);
+    closeCase(kase, 'dropped_out', afterIdx, 'Виписано за неявку (рішення терапевта).');
+    return { summary: 'Випадок закрито: виписка за неявку.', event, closed: true };
+  }
+
+  const d = (params.missed && params.missed[optionId]) || {};
+  kase.state.alliance = clamp100((kase.state.alliance ?? 0) + (d.alliance || 0));
+  kase.state.dropoutRisk = clamp100((kase.state.dropoutRisk ?? 0) + (d.dropoutRisk || 0));
+  event.description = optionId === 'outreach'
+    ? 'Терапевт вийшов на контакт після неявки.'
+    : 'Неявку залишено без реакції.';
+  kase.events.push(event);
+
+  const summary = optionId === 'outreach'
+    ? 'Контакт відновлено: альянс трохи зміцнів, ризик випадання знижено.'
+    : 'Пасивна реакція: альянс послабшав, ризик випадання зріс.';
+  return { summary, event, closed: false };
 }
 
 function closeCase(kase, status, atSession, summary) {

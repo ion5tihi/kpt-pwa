@@ -186,6 +186,25 @@ interface Outcome {
 }
 ```
 
+### ClinicEvent — інбокс подій клініки (T5.3)
+```ts
+interface ClinicEvent {
+  id: string;
+  type: 'missed_session' | 'urgent_intake';
+  title: string; body: string;
+  caseCode?: string;            // missed_session — кейс у caseload
+  templateId?: string;          // urgent_intake — шаблон для нового Case
+  options: { id: string; label: string; tone: 'primary'|'ghost'|'danger' }[];
+  status: 'pending' | 'resolved';
+  resolution?: string;
+}
+```
+Генерація — детермінована (`src/clinic/inbox.js`): `missed_session` коли активний кейс має
+`dropoutRisk ≥ 35`; `urgent_intake` коли звільняється слот (кейс закрито) — `pickUrgentTemplate`
+обирає «гострий» шаблон. Наслідки `missed_session` — через `case.applyMissedSession`
+(outreach: alliance↑/ризик↓; wait: alliance↓/ризик↑; discharge: закриває як `dropped_out`).
+`urgent_intake.accept` → звичайний потік прийому з шаблону. Зберігається в `simulatorState.inbox`.
+
 ### TraineeProfile — лонгітюдна компетентність стажера
 ```ts
 interface TraineeProfile {

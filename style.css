@@ -492,6 +492,36 @@ button:disabled {
 }
 .tmpl-obj li { margin-bottom: 2px; }
 
+/* Інбокс подій клініки (T5.3) */
+.inbox-card { margin-top: 16px; }
+.inbox-badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+  background: var(--anx);
+  border-radius: 999px;
+}
+.inbox-item {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--primary-border);
+  border-left-width: 4px;
+  background: var(--primary-soft);
+}
+.inbox-item:last-child { margin-bottom: 0; }
+.inbox-item.inbox-miss { border-left-color: var(--accent); background: var(--accent-soft); }
+.inbox-item.inbox-urgent { border-left-color: var(--anx); background: var(--anx-soft); }
+.inbox-title { font-weight: 700; margin: 0 0 4px; font-size: 13.5px; }
+.inbox-body { margin: 0 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
+.inbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* Чат картка */
 .chat-card {
   display: flex;
