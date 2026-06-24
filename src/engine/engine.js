@@ -133,12 +133,15 @@ export function stepBetweenSessions({ state, initialState, assessment, context }
   const rng = mulberry32(seedMix(ctx.seed >>> 0, ctx.sessionIndex | 0));
   const rTrig = rng(), rSev = rng(), rRelapse = rng(), rDrop = rng();
 
-  // §6.1 Подія життя (тригер)
+  // §6.1 Подія життя (тригер). Сценарні події (T5.2) можуть форсувати рішення/тяжкість,
+  // НЕ змінюючи порядку витягування rng → детермінізм і форки зберігаються.
   const tg = params.trigger;
-  const triggered = rTrig < tg.pBase;
-  const triggerSeverity = triggered ? tg.sevMin + rSev * (tg.sevMax - tg.sevMin) : 0;
+  const triggered = ctx.forceTrigger != null ? !!ctx.forceTrigger : (rTrig < tg.pBase);
+  const triggerSeverity = triggered
+    ? (ctx.forcedTriggerSeverity != null ? clamp01(ctx.forcedTriggerSeverity) : tg.sevMin + rSev * (tg.sevMax - tg.sevMin))
+    : 0;
   if (triggered) {
-    events.push({ type: 'life_trigger', severity: round1(triggerSeverity), description: '' });
+    events.push({ type: 'life_trigger', severity: round1(triggerSeverity), description: '', ...(ctx.forceTrigger ? { scripted: true } : {}) });
   }
 
   // §3–§4 Суб-компетентності та прихований стан
@@ -158,13 +161,13 @@ export function stepBetweenSessions({ state, initialState, assessment, context }
     + rl.bHomework * (1 - hidden.homeworkAdherence)
     - rl.bSober * Math.min(state.soberDays, rl.soberCap) / rl.soberCap;
   const pRelapse = sigmoid(zRelapse);
-  const relapse = rRelapse < pRelapse;
+  const relapse = ctx.forceRelapse != null ? !!ctx.forceRelapse : (rRelapse < pRelapse);
   let soberDays;
   if (relapse) {
     pacs = clamp(pacs + rl.cravingShock, 0, 30);
     phq9 = clamp(phq9 + rl.depressShock, 0, 27);
     soberDays = 0;
-    events.push({ type: 'relapse', severity: round1(triggerSeverity), description: '' });
+    events.push({ type: 'relapse', severity: round1(triggerSeverity), description: '', ...(ctx.forceRelapse ? { scripted: true } : {}) });
   } else {
     soberDays = state.soberDays + ctx.daysBetweenSessions;
   }

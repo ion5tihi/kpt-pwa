@@ -72,6 +72,7 @@
           <div class="panel-body" id="constructor-content">
             <div class="mode-selector seg-control">
               <button id="mode-manual" class="active" data-mode="manual">Параметри</button>
+              <button id="mode-template" data-mode="template">Бібліотека</button>
               <button id="mode-auto" data-mode="auto">Випадковий</button>
             </div>
 
@@ -152,6 +153,14 @@
                   <span>⚠ Суїцид/Відміна</span>
                 </div>
               </div>
+            </div>
+
+            <div id="template-params" style="display:none">
+              <div class="input-group">
+                <label for="p-template">Кейс із бібліотеки</label>
+                <select id="p-template"></select>
+              </div>
+              <div id="template-info" class="template-info"></div>
             </div>
 
             <div id="auto-params" style="display:none">

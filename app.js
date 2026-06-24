@@ -5,7 +5,8 @@ import { api, TYPE_LABEL, setUsageReporter } from './api.js';
 import { emptyUsage, addUsage, totalTokens, formatTokens, formatCostUSD } from './src/usage/usage.js';
 import { SpeechRecognizer } from './speech.js';
 import { intakeFromConstructor } from './src/clinic/intake.js';
-import { createCase, recordSessionOutcome, getTrajectory, canContinue, forkCaseFromSession } from './src/clinic/case.js';
+import { createCase, recordSessionOutcome, getTrajectory, canContinue, forkCaseFromSession, beginSession } from './src/clinic/case.js';
+import { CASE_TEMPLATES, getTemplate, templatesByDifficulty, DIFFICULTY_LABELS, intakeFromTemplate } from './src/clinic/templates.js';
 import { buildAssessment } from './src/clinic/assessment.js';
 import { buildTraineeProfile, buildCaseReport, CTSR_ITEM_LABELS, MITI_GLOBAL_LABELS } from './src/clinic/profile.js';
 
@@ -239,22 +240,25 @@ function setupSimulatorTab() {
     $('toggle-constructor-btn').textContent = isCollapsed ? 'Розгорнути' : 'Згорнути';
   };
 
-  // Перемикач режимів генератора
-  $('mode-manual').onclick = () => {
-    $('mode-manual').classList.add('active');
-    $('mode-auto').classList.remove('active');
-    $('manual-params').style.display = 'block';
-    $('auto-params').style.display = 'none';
-    simulatorState.constructorConfig.mode = 'manual';
+  // Перемикач режимів генератора (Параметри / Бібліотека / Випадковий)
+  const setConstructorMode = (mode) => {
+    const modes = ['manual', 'template', 'auto'];
+    modes.forEach((m) => $(`mode-${m}`).classList.toggle('active', m === mode));
+    $('manual-params').style.display = mode === 'manual' ? 'block' : 'none';
+    $('template-params').style.display = mode === 'template' ? 'block' : 'none';
+    $('auto-params').style.display = mode === 'auto' ? 'block' : 'none';
+    simulatorState.constructorConfig.mode = mode;
     saveSimulator();
   };
+  $('mode-manual').onclick = () => setConstructorMode('manual');
+  $('mode-template').onclick = () => setConstructorMode('template');
+  $('mode-auto').onclick = () => setConstructorMode('auto');
 
-  $('mode-auto').onclick = () => {
-    $('mode-auto').classList.add('active');
-    $('mode-manual').classList.remove('active');
-    $('manual-params').style.display = 'none';
-    $('auto-params').style.display = 'block';
-    simulatorState.constructorConfig.mode = 'auto';
+  // Бібліотека кейсів (T5.1): заповнення селектора + інфо-панель при виборі
+  populateTemplateSelect();
+  $('p-template').onchange = () => {
+    simulatorState.constructorConfig.templateId = $('p-template').value;
+    renderTemplateInfo($('p-template').value);
     saveSimulator();
   };
 
@@ -338,17 +342,52 @@ function setupSimulatorTab() {
   restoreConstructorUI();
 }
 
+// Заповнити селектор бібліотеки кейсів, згрупований за складністю (1→5).
+function populateTemplateSelect() {
+  const sel = $('p-template');
+  if (!sel) return;
+  sel.innerHTML = templatesByDifficulty().map((g) => {
+    const opts = g.items.map((t) =>
+      `<option value="${t.id}">D${t.difficulty} · ${escapeHtml(t.title)}</option>`
+    ).join('');
+    return `<optgroup label="${g.difficulty} — ${escapeHtml(g.label)}">${opts}</optgroup>`;
+  }).join('');
+}
+
+// Інфо-панель обраного шаблону: складність, тип, цілі навчання, нотатка валідації.
+function renderTemplateInfo(id) {
+  const box = $('template-info');
+  if (!box) return;
+  const t = getTemplate(id) || CASE_TEMPLATES[0];
+  if (!t) { box.innerHTML = ''; return; }
+  const typeLabel = TYPE_LABEL[t.disorderType] || t.disorderType;
+  const objectives = t.learningObjectives.map((o) => `<li>${escapeHtml(o)}</li>`).join('');
+  const reviewed = t.clinicianReviewed
+    ? '<span class="tmpl-badge ok">✓ перевірено клініцистом</span>'
+    : '<span class="tmpl-badge draft">чернетка — не валідовано клініцистом</span>';
+  // Нейтральний маркер сценарної події (T5.2): сигналізує, що в кейсі є запланована
+  // подія, але БЕЗ деталей (час/тип) — щоб не псувати навчальну несподіванку.
+  const scripted = (t.scriptedEvents && t.scriptedEvents.length)
+    ? '<span class="tmpl-badge event">📌 містить сценарну подію</span>' : '';
+  box.innerHTML = `
+    <div class="tmpl-head">
+      <span class="tmpl-diff">Складність ${t.difficulty}/5 · ${escapeHtml(DIFFICULTY_LABELS[t.difficulty] || '')}</span>
+      ${reviewed}${scripted}
+    </div>
+    <p class="tmpl-type">${escapeHtml(typeLabel)} · ${escapeHtml(t.stage)}</p>
+    <p class="tmpl-brief">${escapeHtml(t.clinicalBrief)}</p>
+    <p class="tmpl-obj-title">Що тренує:</p>
+    <ul class="tmpl-obj">${objectives}</ul>`;
+}
+
 function restoreConstructorUI() {
   const config = simulatorState.constructorConfig;
-  if (config.mode === 'auto') {
-    $('mode-auto').click();
-  } else {
-    $('mode-manual').click();
-  }
-  
+  const mode = ['auto', 'template', 'manual'].includes(config.mode) ? config.mode : 'manual';
+  $(`mode-${mode}`).click();
+
   if (config.type) $('p-type').value = config.type;
   if (config.stage) $('p-stage').value = config.stage;
-  
+
   const sliders = ['resist', 'insight', 'open', 'risk'];
   sliders.forEach(key => {
     if (config[key] !== undefined) {
@@ -356,6 +395,14 @@ function restoreConstructorUI() {
       $(`val-${key}`).textContent = config[key];
     }
   });
+
+  // Бібліотека: відновити вибраний кейс або взяти перший
+  const tid = getTemplate(config.templateId) ? config.templateId : (CASE_TEMPLATES[0] && CASE_TEMPLATES[0].id);
+  if (tid) {
+    $('p-template').value = tid;
+    config.templateId = tid;
+    renderTemplateInfo(tid);
+  }
 }
 
 function saveSimulator() {
@@ -394,15 +441,28 @@ async function generateVirtualPatient() {
   busy = true;
   setSimulatorBusyState(true);
   
-  // Оновити конфіг з форми
+  // Оновити конфіг з форми (або з обраного шаблону бібліотеки)
   const config = simulatorState.constructorConfig;
-  config.type = $('p-type').value;
-  config.stage = $('p-stage').value;
-  config.resist = parseInt($('p-resist').value);
-  config.insight = parseInt($('p-insight').value);
-  config.open = parseInt($('p-open').value);
-  config.risk = parseInt($('p-risk').value);
-  
+  let activeTemplate = null;
+  if (config.mode === 'template') {
+    activeTemplate = getTemplate(config.templateId) || CASE_TEMPLATES[0];
+    config.type = activeTemplate.disorderType;
+    config.stage = activeTemplate.stage;
+    config.resist = activeTemplate.constructorConfig.resist;
+    config.insight = activeTemplate.constructorConfig.insight;
+    config.open = activeTemplate.constructorConfig.open;
+    config.risk = activeTemplate.constructorConfig.risk;
+    config.templateBrief = activeTemplate.clinicalBrief;   // наратив-сід для озвучення (T5.1)
+  } else {
+    config.type = $('p-type').value;
+    config.stage = $('p-stage').value;
+    config.resist = parseInt($('p-resist').value);
+    config.insight = parseInt($('p-insight').value);
+    config.open = parseInt($('p-open').value);
+    config.risk = parseInt($('p-risk').value);
+    delete config.templateBrief;
+  }
+
   resetSimulatorSession();
   
   showThinkingIndicator('chat-feed', 'ШІ створює пацієнта...');
@@ -434,9 +494,21 @@ async function generateVirtualPatient() {
     simulatorState.hiddenState = result.hiddenState || null;
 
     // Створюємо симуляційний випадок (Case) з прийому: рушій вестиме реальний стан.
+    // У режимі бібліотеки застосовуємо initialStatePreset шаблону (T5.1).
     const pCode = trainerCodeFromName(pName);
-    const { profile, initialState } = intakeFromConstructor(config, result.hiddenState, { displayName: pName });
-    cases[pCode] = createCase({ profile, initialState, seed: (Math.random() * 0xffffffff) >>> 0 });
+    const { profile, initialState } = activeTemplate
+      ? intakeFromTemplate(activeTemplate, result.hiddenState, { displayName: pName })
+      : intakeFromConstructor(config, result.hiddenState, { displayName: pName });
+    cases[pCode] = createCase({
+      profile, initialState,
+      seed: (Math.random() * 0xffffffff) >>> 0,
+      scriptedEvents: activeTemplate ? activeTemplate.scriptedEvents : []   // T5.2
+    });
+    // Сценарні події, заплановані на 1-шу сесію (напр. пацієнт одразу в кризі)
+    const begun = beginSession(cases[pCode], 1);
+    if (begun.riskFlag != null && simulatorState.hiddenState) {
+      simulatorState.hiddenState.riskFlag = Math.max(parseInt(simulatorState.hiddenState.riskFlag) || 0, begun.riskFlag);
+    }
     storage.saveCases(cases);
     simulatorState.activeCaseCode = pCode;
     simulatorState.sessionNo = 1; // перший прийом нового випадку
@@ -800,7 +872,19 @@ async function startRepeatSimulatorSession(patient) {
   };
   
   const sessionNumber = practiceRecords.length + 1;
-  
+
+  // T5.2: застосувати сценарні події, заплановані на цю сесію (PRE-session).
+  // Напр. криза безпеки на сесії N: піднімаємо ризик у стані кейса (для safety-override
+  // рушія) і в прихованій моделі (щоб LLM-пацієнт міг це озвучити у відповідь на скринінг).
+  const kaseForSession = cases[patient.code];
+  if (kaseForSession) {
+    const begun = beginSession(kaseForSession, sessionNumber);
+    if (begun.riskFlag != null) {
+      hiddenState.riskFlag = Math.max(parseInt(hiddenState.riskFlag) || 0, begun.riskFlag);
+    }
+    if (begun.applied.length) storage.saveCases(cases);
+  }
+
   // Визначаємо етап лікування з картки пацієнта
   const stageMatch = patientCard.match(/Етап лікування:\s*(.*)/i);
   const stage = stageMatch ? stageMatch[1].trim() : "рання реабілітація";

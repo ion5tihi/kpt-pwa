@@ -440,6 +440,58 @@ button:disabled {
   line-height: 1.5;
 }
 
+/* Бібліотека кейсів (T5.1) */
+.template-info {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background-color: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.tmpl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.tmpl-diff {
+  font-weight: 700;
+  color: var(--primary, var(--accent));
+}
+.tmpl-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.tmpl-badge.ok { background: var(--primary-soft); color: var(--primary, var(--accent)); border: 1px solid var(--primary-border); }
+.tmpl-badge.draft { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.tmpl-badge.event { background: var(--anx-soft); color: var(--anx); border: 1px solid var(--anx); }
+.tmpl-type {
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0 0 6px;
+}
+.tmpl-brief { margin: 0 0 8px; }
+.tmpl-obj-title {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin: 0 0 4px;
+}
+.tmpl-obj {
+  margin: 0;
+  padding-left: 18px;
+}
+.tmpl-obj li { margin-bottom: 2px; }
+
 /* Чат картка */
 .chat-card {
   display: flex;

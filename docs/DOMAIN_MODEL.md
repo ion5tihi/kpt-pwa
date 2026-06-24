@@ -209,13 +209,37 @@ interface CaseTemplate {
   title: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   disorderType: DisorderType;
+  stage: string;                     // етап лікування
+  constructorConfig: { resist; insight; open; risk };  // повзунки 0–5/0–3 (наратив + прийом)
   initialStatePreset: Partial<ClinicalState>;
   learningObjectives: string[];      // які компетентності тренує
-  scriptedEvents?: ScriptedEvent[];  // напр. криза безпеки на сесії N
+  clinicalBrief: string;             // наратив-сід для озвучення + нотатка клініциста
+  scriptedEvents: ScriptedEvent[];   // напр. криза безпеки на сесії N (T5.2)
   authoredBy: string;
   clinicianReviewed: boolean;
 }
 ```
+Реалізація: `src/clinic/templates.js` (бібліотека + `intakeFromTemplate` + `applyStatePreset`).
+
+### ScriptedEvent — авторська запланована подія (T5.2)
+```ts
+interface ScriptedEvent {
+  atSession: number;                 // 1-based сесія, на якій спрацьовує
+  type: 'safety_crisis' | 'life_trigger' | 'relapse';
+  severity?: number;                 // 0..1 — для life_trigger/relapse
+  riskLevel?: 2 | 3;                 // для safety_crisis (за замовч. 2)
+  description?: string;              // наратив-сід (НЕ показується стажеру — це вправа)
+  note?: string;                     // нотатка клініциста
+}
+```
+Дві фази (`src/clinic/scripted.js`):
+- **`safety_crisis`** — PRE-session: `beginSession()` піднімає `suicideRisk≥2` у стані кейса
+  (для safety-override §7) і повертає `riskFlag` для прихованої моделі LLM. Стажер мусить
+  провести скринінг; інакше — криза закриває випадок.
+- **`life_trigger` / `relapse`** — рушій форсує подію в кроці між сесіями (`scriptedContext()`
+  → override §6.1/§6.2). Порядок витягування rng не змінюється → детермінізм і форки збережено.
+
+⚠️ Сценарії безпеки потребують валідації клініцистом (SPEC §8, G.3).
 
 ---
 

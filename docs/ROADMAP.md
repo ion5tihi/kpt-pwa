@@ -73,8 +73,19 @@
 
 ## Фаза 5 — Клініка та контент 🟨
 Мета: повноцінне навчальне середовище.
-- [ ] T5.1 `CaseTemplate` бібліотека + прогресія складності (1–5).
-- [ ] T5.2 Сценарії безпеки (scripted events: криза на сесії N) — валідовані клініцистом.
+- [x] ✅ T5.1 `CaseTemplate` бібліотека + прогресія складності (1–5): чистий модуль
+      `src/clinic/templates.js` (5 авторських шаблонів D1–D5, `initialStatePreset`,
+      `learningObjectives`, `intakeFromTemplate`, `applyStatePreset`) + 9 тестів. UI: режим
+      «Бібліотека» в конструкторі (`#mode-template`, селектор за складністю, інфо-панель цілей).
+      Наратив-сід шаблону йде в озвучення (`config.templateBrief` → `patientGenerationPrompt`).
+      ⚠️ Контент — чернетка (`clinicianReviewed:false`), чекає валідації клініциста (G.1).
+- [~] 🟨 T5.2 Сценарії безпеки (scripted events: криза на сесії N): чистий модуль
+      `src/clinic/scripted.js` (safety_crisis pre-session через `beginSession`; life_trigger/relapse
+      override рушія через `scriptedContext`, детермінізм збережено) + 10 тестів. Інтегровано в
+      `case.js` (createCase/recordSessionOutcome/forkCaseFromSession), `engine.js` (force-гачки),
+      app (обидва потоки старту сесії піднімають `riskFlag`). Шаблони D2 (криза на с.3) і D5
+      (зрив на с.2) + UI-маркер «містить сценарну подію». **Лишилось:** валідація сценаріїв
+      клініцистом (G.3) + живий прогін LLM-потоку повторної сесії.
 - [ ] T5.3 Інбокс подій клініки (пропуск, терміновий новий пацієнт).
 - [x] ✅ T5.4 Deliberate practice: `forkCaseFromSession()` (чистий, тести) «відмотує» випадок до
       сесії N (той самий seed → ізолює ефект терапевта). Кнопки «↻ з сесії N» у звіті → форк

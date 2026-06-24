@@ -5,6 +5,7 @@
 
 import { stepBetweenSessions } from '../engine/engine.js';
 import { ENGINE_PARAMS } from '../engine/params.js';
+import { scriptedContext, applyPreSessionScript } from './scripted.js';
 
 const CURRENT_SCHEMA = 1;
 const clone = (x) => structuredClone(x);
@@ -16,8 +17,9 @@ const uid = () => 'c_' + Math.random().toString(36).slice(2, 10);
  * @param {import('../engine/types').PatientProfile} args.profile
  * @param {import('../engine/types').ClinicalState} args.initialState
  * @param {number} [args.seed]
+ * @param {import('./scripted.js').ScriptedEvent[]} [args.scriptedEvents]  сценарні події (T5.2)
  */
-export function createCase({ profile, initialState, seed = 12345 }) {
+export function createCase({ profile, initialState, seed = 12345, scriptedEvents = [] }) {
   return {
     id: uid(),
     schemaVersion: CURRENT_SCHEMA,
@@ -26,11 +28,26 @@ export function createCase({ profile, initialState, seed = 12345 }) {
     initialState: clone(initialState), // S₀ на прийомі
     sessions: [],
     events: [],
+    scriptedEvents: clone(scriptedEvents || []), // авторські заплановані події (T5.2)
     status: 'active',
     outcome: null,
     seed,
     _stableStreak: 0                   // лічильник стабільних сесій для виписки
   };
+}
+
+/**
+ * Початок сесії `sessionIndex` (PRE-session). Застосовує сценарні події, що мають
+ * настати ДО/ПІД ЧАС цієї сесії (напр. пацієнт приходить у кризі). Мутує `kase.state`.
+ * @param {object} kase
+ * @param {number} sessionIndex  1-based номер сесії, що ось-ось почнеться
+ * @returns {{applied: import('./scripted.js').ScriptedEvent[], riskFlag: number|null}}
+ *          `riskFlag` — підказка для прихованої моделі LLM, щоб пацієнт озвучив ризик.
+ */
+export function beginSession(kase, sessionIndex) {
+  const { state, applied, riskFlag } = applyPreSessionScript(kase.state, kase.scriptedEvents || [], sessionIndex);
+  kase.state = state;
+  return { applied, riskFlag };
 }
 
 const isComorbidGAD = (profile) => profile?.disorderType === 'dual-gtr';
@@ -59,7 +76,8 @@ export function recordSessionOutcome(kase, assessment, opts = {}, params = ENGIN
       daysBetweenSessions: opts.daysBetweenSessions ?? 7,
       comorbidityGAD: isComorbidGAD(kase.profile),
       behavioralActivation: !!opts.behavioralActivation,
-      seed: kase.seed
+      seed: kase.seed,
+      ...scriptedContext(kase.scriptedEvents || [], sessionIndex) // T5.2: форсовані події між сесіями
     }
   }, params);
 
@@ -153,6 +171,7 @@ export function forkCaseFromSession(kase, atSession) {
     initialState: clone(kase.initialState),
     sessions: clone(kase.sessions.slice(0, atSession - 1)), // сесії ДО точки повтору
     events: clone((kase.events || []).filter((e) => e.afterSessionIndex < atSession)),
+    scriptedEvents: clone(kase.scriptedEvents || []),       // ті самі сценарні події (T5.2)
     status: 'active',
     outcome: null,
     seed: kase.seed,                 // той самий жереб → ізолюємо ефект терапевта
