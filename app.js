@@ -10,6 +10,7 @@ import { CASE_TEMPLATES, getTemplate, templatesByDifficulty, DIFFICULTY_LABELS, 
 import { caseNeedsFollowup, makeMissedSessionEvent, makeUrgentIntakeEvent, pickUrgentTemplate, pendingCount } from './src/clinic/inbox.js';
 import { buildAssessment } from './src/clinic/assessment.js';
 import { buildTraineeProfile, buildCaseReport, CTSR_ITEM_LABELS, MITI_GLOBAL_LABELS } from './src/clinic/profile.js';
+import { buildCaseExport, caseExportToHtml } from './src/clinic/caseExport.js';
 
 // ---- Ініціалізація та глобальні змінні ----
 let settings = storage.getSettings();
@@ -1247,6 +1248,15 @@ function renderCaseReport(code) {
     </div>
     ${r.sessions > 0 ? `
     <div class="dash-section">
+      <div class="dash-section-title">👤 Експорт для супервізора</div>
+      <p class="dash-empty" style="margin-bottom:8px">Транскрипти всіх сесій + оцінки CTS-R/MITI + траєкторія в одному файлі. HTML — для друку/збереження в PDF.</p>
+      <div class="report-fork-btns">
+        <button class="sm-btn primary-btn" data-export="html">⬇ Звіт (HTML → PDF)</button>
+        <button class="sm-btn ghost-btn" data-export="json">⬇ Дані (JSON)</button>
+      </div>
+    </div>` : ''}
+    ${r.sessions > 0 ? `
+    <div class="dash-section">
       <div class="dash-section-title">🔁 Перепройти (deliberate practice)</div>
       <p class="dash-empty" style="margin-bottom:8px">Відмотати до початку сесії й спробувати інакше. Той самий жереб подій — різниця буде лише у твоїй роботі. Створиться окремий випадок-форк.</p>
       <div class="report-fork-btns">
@@ -1263,6 +1273,36 @@ function renderCaseReport(code) {
   $('case-report-body').querySelectorAll('[data-fork-session]').forEach((btn) => {
     btn.onclick = () => loadForkIntoSimulator(code, +btn.getAttribute('data-fork-session'));
   });
+  $('case-report-body').querySelectorAll('[data-export]').forEach((btn) => {
+    btn.onclick = () => exportCaseForSupervisor(code, btn.getAttribute('data-export'));
+  });
+}
+
+// Завантажити вміст як файл (blob) у браузері.
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Експорт одного кейса для супервізора (легкий зріз T5.5): HTML (друк→PDF) або JSON.
+function exportCaseForSupervisor(code, format) {
+  const kase = cases[code];
+  if (!kase) { alert('Випадок не знайдено.'); return; }
+  const patient = patients.find(p => p.code === code) || null;
+  const exp = buildCaseExport(kase, patient, {
+    typeLabel: TYPE_LABEL[kase.profile?.disorderType] || kase.profile?.disorderType || ''
+  });
+  const safeName = (kase.profile?.displayName || code).replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (format === 'json') {
+    downloadBlob(JSON.stringify(exp, null, 2), `kpt-supervisor-${safeName}-${stamp}.json`, 'application/json');
+  } else {
+    downloadBlob(caseExportToHtml(exp), `kpt-supervisor-${safeName}-${stamp}.html`, 'text/html');
+  }
 }
 
 // Продовжити активний випадок: відкрити повторний прийом для пацієнта з цим кодом.
