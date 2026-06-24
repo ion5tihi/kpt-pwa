@@ -3,7 +3,7 @@
 // мережі, а кеш — лише офлайн-фолбек. Це усуває «стару версію після деплою» (раніше
 // була stale-while-revalidate, через що доводилось перезавантажувати двічі).
 // ⚠️ Піднімай CACHE_NAME при кожному релізі, щоб старий кеш гарантовано очистився.
-const CACHE_NAME = 'kpt-vct-v0.3.0';
+const CACHE_NAME = 'kpt-vct-v0.4.0';
 const ASSETS = [
   './',
   './index.html',
@@ -21,6 +21,9 @@ const ASSETS = [
   './src/clinic/intake.js',
   './src/clinic/assessment.js',
   './src/clinic/profile.js',
+  './src/clinic/templates.js',
+  './src/clinic/scripted.js',
+  './src/clinic/inbox.js',
   './src/prompts/prompts.js',
   './src/net/fetchRetry.js',
   './src/usage/usage.js',
