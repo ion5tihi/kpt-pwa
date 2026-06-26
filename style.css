@@ -522,6 +522,50 @@ button:disabled {
 .inbox-body { margin: 0 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
 .inbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Трекер: рамка форми прийому + типи прийому */
+.tracker-form-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.tracker-form-head .patient-code-title { margin-bottom: 0; }
+.appt-badge {
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  white-space: nowrap;
+}
+.appt-badge.intake { background: var(--primary-soft); color: var(--primary, var(--accent)); border: 1px solid var(--primary-border); }
+.appt-badge.repeat { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.tracker-form-intro {
+  font-size: 12.5px; line-height: 1.5; color: var(--ink-soft);
+  background: var(--primary-soft); border-left: 3px solid var(--primary, var(--accent));
+  border-radius: 8px; padding: 8px 12px; margin: 0 0 14px;
+}
+.tracker-engine-note {
+  font-size: 13px; line-height: 1.55; color: var(--ink);
+  background: var(--primary-soft); border: 1px solid var(--primary-border);
+  border-radius: 12px; padding: 14px 16px; margin-top: 6px;
+}
+.tracker-engine-note p { margin: 0 0 12px; }
+.tracker-engine-note .primary-btn { width: 100%; }
+
+/* Блок опитувальників цього прийому */
+.scales-section {
+  margin-top: 18px; padding-top: 12px; border-top: 2px solid var(--primary-border);
+}
+.scales-section-head {
+  font-size: 14px; font-weight: 700; color: var(--primary, var(--accent)); margin-bottom: 4px;
+}
+.scales-section-hint {
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft); margin: 0 0 12px;
+}
+
+/* Бейдж типу прийому в історії */
+.appt-tag {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px;
+  border-radius: 999px; margin-top: 3px; white-space: nowrap;
+}
+.appt-tag.intake { background: var(--primary-soft); color: var(--primary, var(--accent)); }
+.appt-tag.repeat { background: var(--bg-soft, #eee); color: var(--ink-soft); }
+
 /* Чат картка */
 .chat-card {
   display: flex;

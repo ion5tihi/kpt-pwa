@@ -1840,20 +1840,43 @@ function renderTrackerForm() {
   
   const today = new Date().toISOString().slice(0, 10);
   const isTrainerPatient = p.code.startsWith('Т-');
-  const repeatBtnHtml = isTrainerPatient 
-    ? `<button id="btn-repeat-session" class="ghost-btn" style="font-size: 13px; padding: 6px 12px; border: 1px solid var(--primary); color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background: transparent; transition: background 0.2s, color 0.2s;">🛋️ Повторний прийом</button>`
-    : '';
-  
-  container.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
-      <div class="patient-code-title" style="margin-bottom: 0;">${escapeHtml(p.code)}</div>
-      ${repeatBtnHtml}
+  const isIntake = p.records.length === 0;            // наступний запис буде стартовим прийомом
+  const apptBadge = isIntake
+    ? `<span class="appt-badge intake">🟢 Стартовий прийом (інтейк)</span>`
+    : `<span class="appt-badge repeat">🔁 Повторний прийом №${p.records.length + 1}</span>`;
+
+  // Спільна шапка: код пацієнта + тип прийому + діагноз
+  const headerHtml = `
+    <div class="tracker-form-head">
+      <div class="patient-code-title">${escapeHtml(p.code)}</div>
+      ${apptBadge}
     </div>
-    
     <div class="input-group">
       <label for="p-note">Діагноз / Опис випадку</label>
       <input type="text" id="p-note" value="${escapeHtml(p.note)}" placeholder="напр. алко + депресія, рання реаб.">
-    </div>
+    </div>`;
+
+  // ── Тренажерний пацієнт: числа веде рушій, ручного введення немає ──
+  if (isTrainerPatient) {
+    container.innerHTML = headerHtml + `
+      <div class="tracker-engine-note">
+        <p>🛋️ <b>Тренажерний пацієнт.</b> Шкали (PACS / GAD-7 / PHQ-9), дні тверезості та події
+        веде <b>симуляційний рушій</b> — вручну вони не заповнюються. Числа на графіку нижче —
+        реальний наслідок твоєї роботи в Тренажері.</p>
+        <button id="btn-repeat-session" class="primary-btn">🛋️ Провести повторний прийом</button>
+      </div>`;
+    $('p-note').oninput = (e) => { p.note = e.target.value; storage.savePatients(patients); renderPatientsList(); };
+    const btnRepeat = $('btn-repeat-session');
+    if (btnRepeat) btnRepeat.onclick = () => startRepeatSimulatorSession(p);
+    renderHistoryTable(p);
+    return;
+  }
+
+  // ── Реальний пацієнт: ручний клінічний запис ──
+  container.innerHTML = headerHtml + `
+    <p class="tracker-form-intro">${isIntake
+      ? 'Перший запис цього пацієнта. Зафіксуй стартові бали опитувальників, проведених на прийомі.'
+      : 'Новий запис прийому. Вкажи дату й заповни шкали за опитувальниками, які провів сьогодні.'}</p>
 
     <div class="form-grid">
       <div class="input-group">
@@ -1879,10 +1902,13 @@ function renderTrackerForm() {
       </div>
     </div>
 
-    <!-- Візуалізація 3 шкал -->
-    ${renderScaleUI(PACS, 'pacs')}
-    ${renderScaleUI(GAD7, 'gad7')}
-    ${renderScaleUI(PHQ9, 'phq9')}
+    <div class="scales-section">
+      <div class="scales-section-head">🧪 Опитувальники цього прийому</div>
+      <p class="scales-section-hint">Заповни з відповідей пацієнта на цьому прийомі. Сума кожної шкали рахується автоматично; пропущені пункти зараховуються як 0.</p>
+      ${renderScaleUI(PACS, 'pacs')}
+      ${renderScaleUI(GAD7, 'gad7')}
+      ${renderScaleUI(PHQ9, 'phq9')}
+    </div>
 
     <div class="input-group full-width" style="margin-top:16px;">
       <label for="f-trigger">Головний тригер тижня</label>
@@ -1890,43 +1916,24 @@ function renderTrackerForm() {
     </div>
 
     <div class="save-record-row">
-      <button id="btn-save-record" class="primary-btn">Зберегти замітку</button>
+      <button id="btn-save-record" class="primary-btn">${isIntake ? 'Зберегти стартовий прийом' : 'Зберегти прийом'}</button>
       <span id="tracker-saved-success" class="success-note">✓ Збережено в картку!</span>
     </div>
   `;
-  
-  // Додаткова логіка збереження нотатки
+
   $('p-note').oninput = (e) => {
     p.note = e.target.value;
     storage.savePatients(patients);
     renderPatientsList();
   };
-
-  $('f-sober').oninput = (e) => {
-    trackerDraft.sober = parseInt(e.target.value) || 0;
-  };
-
+  $('f-sober').oninput = (e) => { trackerDraft.sober = parseInt(e.target.value) || 0; };
   $('f-sleep').oninput = (e) => {
     trackerDraft.sleep = parseInt(e.target.value);
     $('val-f-sleep').textContent = e.target.value;
   };
-
-  $('f-trigger').oninput = (e) => {
-    trackerDraft.trigger = e.target.value;
-  };
-
+  $('f-trigger').oninput = (e) => { trackerDraft.trigger = e.target.value; };
   $('btn-save-record').onclick = saveSessionRecord;
 
-  if (isTrainerPatient) {
-    const btnRepeat = $('btn-repeat-session');
-    if (btnRepeat) {
-      btnRepeat.onclick = () => {
-        startRepeatSimulatorSession(p);
-      };
-    }
-  }
-  
-  // Оновлюємо історію
   renderHistoryTable(p);
 }
 
@@ -1985,22 +1992,29 @@ function renderHistoryTable(patient) {
   let rowsHtml = "";
   
   // Показуємо в зворотному хронологічному порядку
+  const total = patient.records.length;
   [...patient.records].reverse().forEach((r, rIdx) => {
     const pacsSum = r.pacs.reduce((a,b)=>a+b, 0);
     const gad7Sum = r.gad7.reduce((a,b)=>a+b, 0);
     const phq9Sum = r.phq9.reduce((a,b)=>a+b, 0);
-    
+
     // Перевірка суїцидальних думок (п.9 PHQ-9)
     const hasSuicidalIdeation = r.phq9 && r.phq9[8] > 0;
-    
+
+    // Тип прийому: 0-й (хронологічно) = стартовий, решта — повторні №N
+    const trueIdx = total - 1 - rIdx;
+    const apptTag = trueIdx === 0
+      ? `<span class="appt-tag intake">Стартовий</span>`
+      : `<span class="appt-tag repeat">№${trueIdx + 1}</span>`;
+
     let practiceLink = "";
     if (r.isPractice) {
       practiceLink = `<br><a href="#" class="view-practice-link" data-index="${rIdx}" style="display:inline-block; font-size:11px; margin-top:4px; color:var(--primary); font-weight:600; text-decoration:underline;">👁️ Див. сесію</a>`;
     }
-    
+
     rowsHtml += `
       <tr>
-        <td>${r.date}</td>
+        <td>${r.date}<br>${apptTag}</td>
         <td>${r.sober} дн.</td>
         <td class="${pacsSum >= 15 ? 'alert-text' : ''}">${pacsSum}</td>
         <td class="${gad7Sum >= 10 ? 'alert-text' : ''}">${gad7Sum}</td>
