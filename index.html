@@ -42,25 +42,6 @@
     <!-- TAB 1: SIMULATOR -->
     <section id="tab-simulator" class="tab-content active">
 
-      <!-- Caseload — список віртуальних випадків зі статусами (T1.5) -->
-      <div class="panel glass caseload-panel" id="caseload-panel" style="display:none">
-        <div class="panel-head" data-collapse="caseload">
-          <h3>🏥 Мій кейслоад</h3>
-          <span id="caseload-count" class="item-meta"></span>
-          <span class="panel-chev">▾</span>
-        </div>
-        <div class="panel-body" id="caseload-list"></div>
-      </div>
-
-      <!-- Профіль компетентності стажера — дашборд «що тренувати далі» (T4.2) -->
-      <div class="panel glass dashboard-panel" id="dashboard-panel" style="display:none">
-        <div class="panel-head" data-collapse="dashboard">
-          <h3>📈 Мій прогрес (CTS-R / MI)</h3>
-          <span class="panel-chev">▾</span>
-        </div>
-        <div class="panel-body" id="dashboard-body"></div>
-      </div>
-
       <div class="simulator-layout">
         
         <!-- Patient Constructor Drawer / Sidebar -->
@@ -232,6 +213,39 @@
             </div>
           </div>
 
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB: PROFILE — кейслоад + прогрес стажера (винесено з Тренажера) -->
+    <section id="tab-profile" class="tab-content">
+      <div class="profile-layout">
+
+        <!-- Caseload — список віртуальних випадків зі статусами (T1.5) -->
+        <div class="panel glass caseload-panel" id="caseload-panel" style="display:none">
+          <div class="panel-head" data-collapse="caseload">
+            <h3>🏥 Мій кейслоад</h3>
+            <span id="caseload-count" class="item-meta"></span>
+            <span class="panel-chev">▾</span>
+          </div>
+          <div class="panel-body" id="caseload-list"></div>
+        </div>
+
+        <!-- Профіль компетентності стажера — дашборд «що тренувати далі» (T4.2) -->
+        <div class="panel glass dashboard-panel" id="dashboard-panel" style="display:none">
+          <div class="panel-head" data-collapse="dashboard">
+            <h3>📈 Мій прогрес (CTS-R / MI)</h3>
+            <span class="panel-chev">▾</span>
+          </div>
+          <div class="panel-body" id="dashboard-body"></div>
+        </div>
+
+        <!-- Порожній стан профілю (коли ще немає випадків) -->
+        <div class="panel glass" id="profile-empty">
+          <div class="panel-body empty-state">
+            <p>Тут зʼявляться твої віртуальні випадки та прогрес компетентностей, щойно проведеш першу сесію в Тренажері.</p>
+          </div>
         </div>
 
       </div>
@@ -552,6 +566,10 @@
     <button class="nav-item active" data-tab="tab-simulator">
       <span class="nav-icon">🛋️</span>
       <span class="nav-label">Тренажер</span>
+    </button>
+    <button class="nav-item" data-tab="tab-profile">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Профіль</span>
     </button>
     <button class="nav-item" data-tab="tab-tracker">
       <span class="nav-icon">📊</span>

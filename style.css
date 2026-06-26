@@ -401,6 +401,15 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+/* Вкладка «Профіль»: кейслоад + прогрес у колонку */
+.profile-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-layout .caseload-panel,
+.profile-layout .dashboard-panel { margin: 0; }
+
 /* ==========================================================================
    TAB 1: SIMULATOR LAYOUT
    ========================================================================== */

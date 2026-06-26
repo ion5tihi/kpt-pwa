@@ -174,6 +174,8 @@ function switchTab(tabId) {
   // Додаткові дії при переході на вкладку
   if (tabId === 'tab-tracker') {
     renderTracker();
+  } else if (tabId === 'tab-profile') {
+    renderProfile();
   } else if (tabId === 'tab-simulator') {
     scrollChatToBottom();
   }
@@ -1142,6 +1144,18 @@ const CASE_STATUS = {
 };
 const CASE_ORDER = { active: 0, crisis: 1, dropped_out: 2, discharged: 3 };
 
+// Вкладка «Профіль»: кейслоад + прогрес + порожній стан, коли ще немає випадків.
+function renderProfile() {
+  renderCaseload();
+  renderDashboard();
+  const empty = $('profile-empty');
+  if (empty) {
+    const hasData = $('caseload-panel')?.style.display !== 'none'
+      || $('dashboard-panel')?.style.display !== 'none';
+    empty.style.display = hasData ? 'none' : '';
+  }
+}
+
 function renderCaseload() {
   const panel = $('caseload-panel');
   const list = $('caseload-list');
@@ -1493,8 +1507,7 @@ function chatTranscript() {
 }
 
 function renderSimulator() {
-  renderCaseload();
-  renderDashboard();
+  renderProfile();
   renderInbox();
 
   const dFeed = $('chat-feed');
