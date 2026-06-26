@@ -155,6 +155,19 @@ body {
   font-size: 11px;
   color: var(--ink-soft);
 }
+.app-version {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary, var(--accent));
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 999px;
+  vertical-align: middle;
+}
 
 /* Нижня навігаційна панель */
 .app-nav {
