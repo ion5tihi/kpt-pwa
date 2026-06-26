@@ -28,7 +28,7 @@
       <div class="logo-icon">🌿</div>
       <div class="logo-text">
         <h1>КПТ-Клініка</h1>
-        <div class="header-subtitle">Тренажер компетентностей & Клінічний трекер <span id="app-version" class="app-version">VCT v0.4.6</span></div>
+        <div class="header-subtitle">Тренажер компетентностей & Клінічний трекер <span id="app-version" class="app-version">VCT v0.4.7</span></div>
       </div>
     </div>
     <div class="header-actions">
@@ -268,30 +268,44 @@
             <div id="tracker-patients-list" class="patients-list">
               <!-- JS renders patient list items here -->
             </div>
-            <div class="add-patient-form">
+            <button id="toggle-add-patient" class="ghost-btn add-patient-toggle">+ Новий пацієнт</button>
+            <div class="add-patient-form" id="add-patient-form" hidden>
               <input type="text" id="new-patient-code" placeholder="Код (напр. О-41)" maxlength="12">
-              <button id="btn-add-patient" class="primary-btn">+</button>
+              <button id="btn-add-patient" class="primary-btn">Додати</button>
             </div>
           </div>
         </div>
 
         <!-- Patient Details and Form -->
-        <div class="patient-details-layout">
-          
+        <div class="patient-details-layout" id="patient-details-layout">
+
+          <!-- Sticky detail header: back (mobile) + поточний пацієнт -->
+          <div class="detail-header" id="tracker-detail-header" hidden>
+            <button id="btn-back-to-list" class="back-btn">← Пацієнти</button>
+            <span id="detail-patient-label" class="detail-patient-label"></span>
+          </div>
+
+          <!-- Segmented control: Запис / Графік / Історія -->
+          <div class="detail-tabs seg-control" id="tracker-detail-tabs" hidden>
+            <button data-detail-tab="form" class="active">📝 Запис</button>
+            <button data-detail-tab="chart">📈 Графік</button>
+            <button data-detail-tab="history">📋 Історія</button>
+          </div>
+
           <!-- Note Form Card -->
-          <div class="note-form-card panel glass">
+          <div class="note-form-card panel glass" data-detail="form">
             <div class="panel-head">
               <h3>📝 Запис про прийом</h3>
             </div>
             <div class="panel-body" id="tracker-form-container">
               <div class="empty-state">
-                <p>Оберіть пацієнта зі списку зліва, щоб додати замітку або переглянути графіки.</p>
+                <p>Оберіть пацієнта зі списку, щоб додати запис або переглянути графіки.</p>
               </div>
             </div>
           </div>
 
           <!-- Charts and Interpretation -->
-          <div class="charts-card panel glass">
+          <div class="charts-card panel glass" data-detail="chart">
             <div class="panel-head">
               <h3>📈 Клінічна динаміка</h3>
             </div>
@@ -307,13 +321,13 @@
             </div>
           </div>
 
-          <!-- History Records Table -->
-          <div class="history-table-card panel glass">
+          <!-- History Records -->
+          <div class="history-table-card panel glass" data-detail="history">
             <div class="panel-head">
               <h3>📋 Історія прийомів</h3>
             </div>
-            <div class="panel-body table-responsive" id="history-table-container">
-              <p class="empty-text">Історія заміна порожня.</p>
+            <div class="panel-body" id="history-table-container">
+              <p class="empty-text">Історія порожня.</p>
             </div>
           </div>
 

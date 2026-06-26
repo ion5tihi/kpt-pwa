@@ -20,6 +20,9 @@ let patients = storage.getPatients();
 let cases = storage.getCases();
 let activeTab = 'tab-profile';
 let selectedPatientIndex = 0;
+let trackerView = 'list';                 // 'list' | 'detail' — майстер-деталь на мобільному
+let trackerDetailTab = 'form';            // 'form' | 'chart' | 'history' — сегмент деталі
+let scaleOpen = { pacs: false, gad7: false, phq9: false }; // згорнуті шкали у формі
 let busy = false;
 
 // Стан симулятора
@@ -1335,6 +1338,8 @@ function openCaseChart(code) {
   const idx = patients.findIndex(p => p.code === code);
   if (idx === -1) { alert('У Трекері ще немає записів для цього випадку.'); return; }
   selectedPatientIndex = idx;
+  trackerView = 'detail';
+  trackerDetailTab = 'chart';   // одразу показуємо графік
   switchTab('tab-tracker');
 }
 
@@ -1706,31 +1711,69 @@ function setupTrackerTab() {
     renderTracker();
   };
 
+  // Згортання форми «Новий пацієнт»
+  $('toggle-add-patient').onclick = () => {
+    const f = $('add-patient-form');
+    const show = f.hasAttribute('hidden');
+    if (show) { f.removeAttribute('hidden'); $('new-patient-code').focus(); }
+    else f.setAttribute('hidden', '');
+  };
+
   $('btn-add-patient').onclick = () => {
     const codeInp = $('new-patient-code');
     const code = codeInp.value.trim().toUpperCase();
     if (!code) return;
-    
+
     // Перевірка дублікату
     const exists = patients.some(p => p.code === code);
     if (exists) {
       alert("Пацієнт з таким кодом вже існує!");
       return;
     }
-    
-    patients.push({
-      code: code,
-      note: '',
-      group: false,
-      records: []
-    });
-    
+
+    patients.push({ code: code, note: '', group: false, records: [] });
+
     codeInp.value = "";
-    selectedPatientIndex = patients.length - 1;
-    resetTrackerFormDraft();
+    $('add-patient-form').setAttribute('hidden', '');
+    selectPatient(patients.length - 1);   // одразу відкриваємо нового
     storage.savePatients(patients);
-    renderTracker();
   };
+
+  // Майстер-деталь: назад до списку (мобільний)
+  $('btn-back-to-list').onclick = () => { trackerView = 'list'; applyTrackerView(); };
+
+  // Сегменти деталі: Запис / Графік / Історія
+  $$('#tracker-detail-tabs [data-detail-tab]').forEach(btn => {
+    btn.onclick = () => { trackerDetailTab = btn.getAttribute('data-detail-tab'); applyDetailTab(); };
+  });
+}
+
+// Вибір пацієнта зі списку: скидаємо чернетку, відкриваємо деталь (на мобільному).
+function selectPatient(idx) {
+  selectedPatientIndex = idx;
+  resetTrackerFormDraft();
+  scaleOpen = { pacs: false, gad7: false, phq9: false };
+  trackerView = 'detail';
+  trackerDetailTab = 'form';
+  renderTracker();
+}
+
+// Майстер-деталь: на вузькому екрані показуємо АБО список, АБО деталь.
+function applyTrackerView() {
+  const layout = document.querySelector('.tracker-layout');
+  if (!layout) return;
+  const hasPatient = !!patients[selectedPatientIndex];
+  const view = hasPatient ? trackerView : 'list';
+  layout.classList.toggle('view-detail', view === 'detail');
+  layout.classList.toggle('view-list', view === 'list');
+}
+
+// Перемикання сегмента деталі (Запис/Графік/Історія).
+function applyDetailTab() {
+  $$('#tracker-detail-tabs [data-detail-tab]').forEach(b =>
+    b.classList.toggle('active', b.getAttribute('data-detail-tab') === trackerDetailTab));
+  $$('#patient-details-layout [data-detail]').forEach(sec =>
+    sec.style.display = sec.getAttribute('data-detail') === trackerDetailTab ? '' : 'none');
 }
 
 function resetTrackerFormDraft() {
@@ -1748,6 +1791,26 @@ function renderTracker() {
   renderPatientsList();
   renderTrackerForm();
   renderTrackerChart();
+  renderTrackerDetailChrome();
+  applyDetailTab();
+  applyTrackerView();
+}
+
+// Шапка деталі (поточний пацієнт) + видимість сегментів.
+function renderTrackerDetailChrome() {
+  const p = patients[selectedPatientIndex];
+  const header = $('tracker-detail-header');
+  const tabs = $('tracker-detail-tabs');
+  const label = $('detail-patient-label');
+  if (!header || !tabs || !label) return;
+  if (p) {
+    header.removeAttribute('hidden');
+    tabs.removeAttribute('hidden');
+    label.textContent = `${p.code}${p.note ? ' · ' + p.note : ''}`;
+  } else {
+    header.setAttribute('hidden', '');
+    tabs.setAttribute('hidden', '');
+  }
 }
 
 // Список пацієнтів
@@ -1762,11 +1825,7 @@ function renderPatientsList() {
     
     const div = document.createElement('div');
     div.className = `patient-list-item ${idx === selectedPatientIndex ? 'active' : ''}`;
-    div.onclick = () => {
-      selectedPatientIndex = idx;
-      resetTrackerFormDraft();
-      renderTracker();
-    };
+    div.onclick = () => selectPatient(idx);
     
     div.innerHTML = `
       <div class="item-info">
@@ -1788,58 +1847,77 @@ function renderPatientsList() {
   });
 }
 
-// Рендеринг шкал опитувальника
+// Рендеринг шкали опитувальника — згортувана (заголовок із сумою завжди видимий,
+// пункти розкриваються тапом; стан розгортання — у scaleOpen[key]).
 function renderScaleUI(scale, key) {
   const draftVals = trackerDraft[key];
   const sumVal = draftVals.reduce((acc, v) => acc + (v || 0), 0);
+  const filled = draftVals.filter(v => v !== null).length;
   const isThreshold = sumVal >= scale.cut;
-  
+  const open = !!scaleOpen[key];
+
   const badgeClass = isThreshold ? 'scale-badge warning' : 'scale-badge success';
   const badgeText = isThreshold ? `⚠ ${scale.cutLabel}` : 'Норма';
-  
+
   let itemsHtml = "";
-  
-  scale.items.forEach((itemText, qIdx) => {
-    let buttonsHtml = "";
-    for (let optVal = 0; optVal < scale.opts; optVal++) {
-      const isSelected = draftVals[qIdx] === optVal;
-      buttonsHtml += `
-        <button class="score-btn ${isSelected ? 'selected' : ''}" 
-                onclick="window.setDraftScaleValue('${key}', ${qIdx}, ${optVal})">
-          ${optVal}
-        </button>
-      `;
-    }
-    
-    itemsHtml += `
-      <div class="scale-item-row">
-        <div class="scale-q-text">${qIdx + 1}. ${escapeHtml(itemText)}</div>
-        <div class="scale-buttons">${buttonsHtml}</div>
-      </div>
-    `;
-  });
-  
+  if (open) {
+    scale.items.forEach((itemText, qIdx) => {
+      let buttonsHtml = "";
+      for (let optVal = 0; optVal < scale.opts; optVal++) {
+        const isSelected = draftVals[qIdx] === optVal;
+        buttonsHtml += `<button class="score-btn ${isSelected ? 'selected' : ''}"
+          onclick="window.setDraftScaleValue('${key}', ${qIdx}, ${optVal})">${optVal}</button>`;
+      }
+      itemsHtml += `
+        <div class="scale-item-row">
+          <div class="scale-q-text">${qIdx + 1}. ${escapeHtml(itemText)}</div>
+          <div class="scale-buttons">${buttonsHtml}</div>
+        </div>`;
+    });
+  }
+
   return `
-    <div class="scale-wrapper">
-      <div class="scale-title">
-        <span>${escapeHtml(scale.name)}</span>
-        <div>
+    <div class="scale-wrapper ${open ? 'open' : ''}">
+      <button type="button" class="scale-title scale-toggle" data-scale-toggle="${key}">
+        <span class="scale-name"><span class="chev">${open ? '▾' : '▸'}</span> ${escapeHtml(scale.name)}</span>
+        <span class="scale-meta">
           <span>Сума: <b style="color:${scale.color}; font-size: 15px;">${sumVal}</b>/${scale.max}</span>
           <span class="${badgeClass}">${badgeText}</span>
-        </div>
-      </div>
-      <div class="scale-items">
-        ${itemsHtml}
-      </div>
+          <span class="scale-filled">${filled}/${scale.items.length}</span>
+        </span>
+      </button>
+      ${open ? `<div class="scale-items">${itemsHtml}</div>` : ''}
     </div>
   `;
 }
 
-// Запис оцінки у чорновик (глобальна функція для виклику через inline onclick)
+// Запис оцінки у чорновик. Оновлюємо лише цю шкалу in-place, щоб не перебудовувати
+// всю форму (зберігає прокрутку й стан розгортання інших шкал).
 window.setDraftScaleValue = (scaleKey, qIdx, value) => {
   trackerDraft[scaleKey][qIdx] = value;
-  renderTrackerForm();
+  const wrap = document.querySelector(`.scale-wrapper [data-scale-toggle="${scaleKey}"]`)?.closest('.scale-wrapper');
+  if (!wrap) { renderTrackerForm(); return; }
+  // оновити вибрані кнопки рядка
+  const rows = wrap.querySelectorAll('.scale-item-row');
+  const row = rows[qIdx];
+  if (row) row.querySelectorAll('.score-btn').forEach((b, i) => b.classList.toggle('selected', i === value));
+  // перерахувати суму/бейдж/лічильник у заголовку
+  const scale = scaleByKey(scaleKey);
+  const vals = trackerDraft[scaleKey];
+  const sum = vals.reduce((a, v) => a + (v || 0), 0);
+  const filled = vals.filter(v => v !== null).length;
+  const b = wrap.querySelector('.scale-meta b'); if (b) b.textContent = sum;
+  const badge = wrap.querySelector('.scale-badge');
+  if (badge && scale) {
+    const over = sum >= scale.cut;
+    badge.className = `scale-badge ${over ? 'warning' : 'success'}`;
+    badge.textContent = over ? `⚠ ${scale.cutLabel}` : 'Норма';
+  }
+  const fEl = wrap.querySelector('.scale-filled');
+  if (fEl && scale) fEl.textContent = `${filled}/${scale.items.length}`;
 };
+
+const scaleByKey = (k) => ({ pacs: PACS, gad7: GAD7, phq9: PHQ9 }[k]);
 
 // Рендеринг форми
 function renderTrackerForm() {
@@ -1861,7 +1939,6 @@ function renderTrackerForm() {
   // Спільна шапка: код пацієнта + тип прийому + діагноз
   const headerHtml = `
     <div class="tracker-form-head">
-      <div class="patient-code-title">${escapeHtml(p.code)}</div>
       ${apptBadge}
     </div>
     <div class="input-group">
@@ -1947,6 +2024,15 @@ function renderTrackerForm() {
   $('f-trigger').oninput = (e) => { trackerDraft.trigger = e.target.value; };
   $('btn-save-record').onclick = saveSessionRecord;
 
+  // Згортання/розгортання шкал
+  container.querySelectorAll('[data-scale-toggle]').forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.getAttribute('data-scale-toggle');
+      scaleOpen[k] = !scaleOpen[k];
+      renderTrackerForm();
+    };
+  });
+
   renderHistoryTable(p);
 }
 
@@ -2002,16 +2088,14 @@ function renderHistoryTable(patient) {
     return;
   }
   
-  let rowsHtml = "";
-  
+  let cardsHtml = "";
+
   // Показуємо в зворотному хронологічному порядку
   const total = patient.records.length;
   [...patient.records].reverse().forEach((r, rIdx) => {
     const pacsSum = r.pacs.reduce((a,b)=>a+b, 0);
     const gad7Sum = r.gad7.reduce((a,b)=>a+b, 0);
     const phq9Sum = r.phq9.reduce((a,b)=>a+b, 0);
-
-    // Перевірка суїцидальних думок (п.9 PHQ-9)
     const hasSuicidalIdeation = r.phq9 && r.phq9[8] > 0;
 
     // Тип прийому: 0-й (хронологічно) = стартовий, решта — повторні №N
@@ -2020,46 +2104,33 @@ function renderHistoryTable(patient) {
       ? `<span class="appt-tag intake">Стартовий</span>`
       : `<span class="appt-tag repeat">№${trueIdx + 1}</span>`;
 
-    let practiceLink = "";
-    if (r.isPractice) {
-      practiceLink = `<br><a href="#" class="view-practice-link" data-index="${rIdx}" style="display:inline-block; font-size:11px; margin-top:4px; color:var(--primary); font-weight:600; text-decoration:underline;">👁️ Див. сесію</a>`;
-    }
+    const metric = (val, label, alert) =>
+      `<span class="hc-metric ${alert ? 'alert' : ''}"><b>${val}</b><small>${label}</small></span>`;
 
-    rowsHtml += `
-      <tr>
-        <td>${r.date}<br>${apptTag}</td>
-        <td>${r.sober} дн.</td>
-        <td class="${pacsSum >= 15 ? 'alert-text' : ''}">${pacsSum}</td>
-        <td class="${gad7Sum >= 10 ? 'alert-text' : ''}">${gad7Sum}</td>
-        <td class="${phq9Sum >= 10 || hasSuicidalIdeation ? 'alert-text' : ''}">
-          ${phq9Sum}${hasSuicidalIdeation ? ' ⚠' : ''}
-        </td>
-        <td>${r.sleep}/10</td>
-        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
-          ${escapeHtml(r.trigger) || '—'}
-          ${practiceLink}
-        </td>
-      </tr>
-    `;
+    const practiceLink = r.isPractice
+      ? `<a href="#" class="view-practice-link" data-index="${rIdx}">👁️ Див. сесію</a>` : "";
+    const trigger = escapeHtml(r.trigger);
+
+    cardsHtml += `
+      <div class="history-card">
+        <div class="hc-top">
+          <span class="hc-date">${r.date}</span>
+          ${apptTag}
+        </div>
+        <div class="hc-metrics">
+          ${metric(r.sober + ' дн.', 'тверез.', false)}
+          ${metric(pacsSum, 'PACS', pacsSum >= 15)}
+          ${metric(gad7Sum, 'GAD-7', gad7Sum >= 10)}
+          ${metric(phq9Sum + (hasSuicidalIdeation ? ' ⚠' : ''), 'PHQ-9', phq9Sum >= 10 || hasSuicidalIdeation)}
+          ${metric(r.sleep + '/10', 'сон', false)}
+        </div>
+        ${trigger ? `<div class="hc-trigger">🎯 ${trigger}</div>` : ''}
+        ${practiceLink ? `<div class="hc-foot">${practiceLink}</div>` : ''}
+      </div>`;
   });
-  
+
   container.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>Дата</th>
-          <th>Тверезість</th>
-          <th>PACS</th>
-          <th>GAD-7</th>
-          <th>PHQ-9</th>
-          <th>Сон</th>
-          <th>Тригер</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
+    <div class="history-cards">${cardsHtml}</div>
     <div class="info-text" style="margin-top: 8px;">
       ⚠ біля балу PHQ-9 = виявлено суїцидальні думки (ненульова відповідь на 9-й пункт опитувальника).
     </div>

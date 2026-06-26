@@ -893,6 +893,98 @@ button:disabled {
   .tracker-layout {
     grid-template-columns: 1fr;
   }
+  /* Майстер-деталь: на вузькому екрані видно АБО список, АБО деталь */
+  .tracker-layout.view-detail .patients-list-card { display: none; }
+  .tracker-layout.view-list .patient-details-layout { display: none; }
+}
+@media (min-width: 961px) {
+  .back-btn { display: none !important; }   /* на десктопі список завжди поряд */
+}
+
+/* Шапка деталі (поточний пацієнт + назад) */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--primary, var(--accent));
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+.detail-patient-label {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+/* Сегменти деталі */
+.detail-tabs { margin-bottom: 12px; }
+
+/* Кнопка «Новий пацієнт» */
+.add-patient-toggle { width: 100%; margin-top: 8px; }
+
+/* Згортувані шкали у формі */
+.scale-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+.scale-name .chev { display: inline-block; width: 1em; color: var(--ink-soft); }
+.scale-meta { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.scale-filled {
+  font-size: 10.5px; font-weight: 700; color: var(--ink-soft);
+  background: var(--bg-soft, #eee); border-radius: 999px; padding: 1px 7px;
+}
+
+/* Історія прийомів — картки */
+.history-cards { display: flex; flex-direction: column; gap: 10px; }
+.history-card {
+  border: 1px solid var(--primary-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card, transparent);
+}
+.hc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.hc-date { font-weight: 700; font-size: 13.5px; }
+.hc-metrics { display: flex; flex-wrap: wrap; gap: 6px; }
+.hc-metric {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 56px; flex: 1;
+  padding: 6px 4px; border-radius: 8px; background: var(--primary-soft);
+}
+.hc-metric b { font-size: 15px; color: var(--ink); white-space: nowrap; }
+.hc-metric small { font-size: 10px; color: var(--ink-soft); margin-top: 2px; }
+.hc-metric.alert { background: var(--anx-soft); }
+.hc-metric.alert b { color: var(--anx); }
+.hc-trigger { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+.hc-foot { margin-top: 8px; }
+.hc-foot .view-practice-link {
+  font-size: 12px; color: var(--primary, var(--accent));
+  font-weight: 600; text-decoration: underline;
+}
+
+/* Липка кнопка збереження прийому (мобільний) */
+@media (max-width: 960px) {
+  .save-record-row {
+    position: sticky;
+    bottom: 8px;
+    background: var(--bg-card, var(--bg));
+    padding: 8px 0 2px;
+    z-index: 4;
+  }
+  .save-record-row .primary-btn { width: 100%; }
 }
 
 /* Список пацієнтів */
