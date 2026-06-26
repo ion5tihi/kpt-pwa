@@ -414,6 +414,18 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+/* Бібліотека: контекстна примітка-врізка в картці */
+.lib-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary, var(--accent));
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
+
 /* Вкладка «Профіль»: кейслоад + прогрес у колонку */
 .profile-layout {
   display: flex;
