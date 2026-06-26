@@ -18,7 +18,7 @@ let patients = storage.getPatients();
 // Симуляційні випадки (Case) для тренажерних пацієнтів — keyed by код пацієнта.
 // Тримають справжній ClinicalState; рушій просуває його між сесіями (Фаза 1+2).
 let cases = storage.getCases();
-let activeTab = 'tab-simulator';
+let activeTab = 'tab-profile';
 let selectedPatientIndex = 0;
 let busy = false;
 
