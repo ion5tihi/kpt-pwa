@@ -1827,9 +1827,14 @@ function renderPatientsList() {
     div.className = `patient-list-item ${idx === selectedPatientIndex ? 'active' : ''}`;
     div.onclick = () => selectPatient(idx);
     
+    const isVirtual = p.code.startsWith('Т-');
+    const kindBadge = isVirtual
+      ? `<span class="kind-badge virtual" title="Віртуальний пацієнт із Тренажера — числа веде рушій">🛋️ навчальний</span>`
+      : `<span class="kind-badge real" title="Реальний пацієнт — бали вносиш вручну">🩺 реальний</span>`;
+
     div.innerHTML = `
       <div class="item-info">
-        <span class="item-code">${escapeHtml(p.code)}</span>
+        <span class="item-code">${escapeHtml(p.code)} ${kindBadge}</span>
         <span class="item-meta">${escapeHtml(p.note || 'Без діагнозу')} · ${p.records.length} зап.</span>
       </div>
       <span class="star-btn ${p.group ? 'active' : ''}" data-index="${idx}">★</span>

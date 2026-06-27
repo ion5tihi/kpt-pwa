@@ -28,7 +28,7 @@
       <div class="logo-icon">🌿</div>
       <div class="logo-text">
         <h1>КПТ-Клініка</h1>
-        <div class="header-subtitle">Тренажер компетентностей & Клінічний трекер <span id="app-version" class="app-version">VCT v0.4.7</span></div>
+        <div class="header-subtitle">Тренажер компетентностей & Клінічний трекер <span id="app-version" class="app-version">VCT v0.4.8</span></div>
       </div>
     </div>
     <div class="header-actions">
@@ -47,10 +47,11 @@
         <!-- Patient Constructor Drawer / Sidebar -->
         <div class="constructor-card panel glass">
           <div class="panel-head">
-            <h3>⚙️ Конструктор пацієнта</h3>
+            <h3>⚙️ Конструктор навчального пацієнта</h3>
             <button id="toggle-constructor-btn" class="sm-btn">Згорнути</button>
           </div>
           <div class="panel-body" id="constructor-content">
+            <p class="constructor-sub">🛋️ Віртуальний пацієнт для тренування навичок. Числа на графіку веде симуляційний рушій — це чесне дзеркало твоєї роботи, а не реальний випадок.</p>
             <div class="mode-selector seg-control">
               <button id="mode-manual" class="active" data-mode="manual">Параметри</button>
               <button id="mode-template" data-mode="template">Бібліотека</button>
@@ -148,7 +149,7 @@
               <p class="info-text">Система автоматично згенерує випадковий складний клінічний випадок з ухилом у наркологію та розлади психіки.</p>
             </div>
 
-            <button id="btn-generate-patient" class="primary-btn">Згенерувати пацієнта</button>
+            <button id="btn-generate-patient" class="primary-btn">Згенерувати навчального пацієнта</button>
           </div>
         </div>
 
@@ -261,6 +262,7 @@
             <h3>👥 Пацієнти</h3>
           </div>
           <div class="panel-body">
+            <p class="list-sub">🩺 Реальні випадки: вносиш справжні бали опитувальників. Навчальні пацієнти з Тренажера (код Т-…) теж тут — їхні числа веде рушій.</p>
             <div class="list-filter seg-control">
               <button id="filter-all" class="active">Всі</button>
               <button id="filter-group">★ Експ. група</button>
@@ -268,10 +270,11 @@
             <div id="tracker-patients-list" class="patients-list">
               <!-- JS renders patient list items here -->
             </div>
-            <button id="toggle-add-patient" class="ghost-btn add-patient-toggle">+ Новий пацієнт</button>
+            <button id="toggle-add-patient" class="ghost-btn add-patient-toggle">+ Новий реальний пацієнт</button>
             <div class="add-patient-form" id="add-patient-form" hidden>
               <input type="text" id="new-patient-code" placeholder="Код (напр. О-41)" maxlength="12">
               <button id="btn-add-patient" class="primary-btn">Додати</button>
+              <p class="add-patient-hint">Заводиш реальний випадок під кодом — далі вноситимеш справжні бали проведених опитувальників. Навчальних (віртуальних) пацієнтів створює <b>Тренажер</b>.</p>
             </div>
           </div>
         </div>
