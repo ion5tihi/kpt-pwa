@@ -16,6 +16,7 @@
 - [docs/ENGINE.md](docs/ENGINE.md) — симуляційний рушій: як CTS-R/MITI → зміни стану (формули).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — сервіси, потоки даних, поділ LLM (озвучення vs оцінка).
 - [docs/ROADMAP.md](docs/ROADMAP.md) — фази й задачі.
+- [docs/CLINICAL_VALIDATION.md](docs/CLINICAL_VALIDATION.md) — пакет валідації для клініциста (G.1–G.3).
 
 ## Поточний стан коду (legacy v3.0.1)
 Vanilla JS PWA, без білда. Файли: `app.js` (контролер), `api.js` (LLM),
